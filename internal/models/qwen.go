@@ -32,7 +32,7 @@ func PrepareRequestBody(model, diffInfo string) RequestBody {
 	return RequestBody{
 		Model: model,
 		Messages: []Message{
-			{Role: "system", Content: "You are a helpful assistant."},
+			{Role: "system", Content: GetSystemPrompt()},
 			{Role: "user", Content: PrepareQuestionContent(diffInfo)},
 		},
 	}
