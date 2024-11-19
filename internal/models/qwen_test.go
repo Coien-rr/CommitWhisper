@@ -11,8 +11,8 @@ func TestPrepareRequestBody(t *testing.T) {
 	want := RequestBody{
 		"qwen2.5-coder-3b-instruct",
 		[]Message{
-			{"system", "You are a helpful assistant."},
-			{"user", "Hello"},
+			{"system", GetSystemPrompt()},
+			{"user", PrepareQuestionContent("Hello")},
 		},
 	}
 
