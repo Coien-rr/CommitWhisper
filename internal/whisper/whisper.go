@@ -30,7 +30,7 @@ type ResponseBody struct {
 func NewWhisper(url, modelName, key string) *Whisper {
 	return &Whisper{
 		printer:  *NewWhisperPrinter(),
-		llmModel: *models.CreateModel(url, modelName, key),
+		llmModel: models.CreateModel("qwen", url, modelName, key),
 	}
 }
 
@@ -39,7 +39,7 @@ func (w *Whisper) Greet() {
 }
 
 func (w *Whisper) GenerateCommitMessage(diffInfo string) (string, error) {
-	req, err := w.llmModel.PrePareRequest(diffInfo)
+	req, err := w.llmModel.PrepareRequest(diffInfo)
 	resp, err := w.GeneratingCommitMessage(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request: %v", err)

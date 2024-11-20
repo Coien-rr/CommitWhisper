@@ -1,15 +1,10 @@
 package models
 
-import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"net/http"
-)
+import "net/http"
 
-// type Model interface {
-// 	GetModelResponse(diffInfo string) string
-// }
+type Model interface {
+	PrepareRequest(diffInfo string) (*http.Request, error)
+}
 
 type RequestBody struct {
 	Model    string    `json:"model"`
@@ -21,45 +16,20 @@ type Message struct {
 	Content string `json:"content"`
 }
 
-type Model struct {
+type BaseModel struct {
 	url       string
 	modelName string
 	key       string
-}
-
-func (m *Model) prepareRequestBody(diffInfo string) RequestBody {
-	return RequestBody{
-		Model: m.modelName,
-		Messages: []Message{
-			{Role: "system", Content: GetSystemPrompt()},
-			{Role: "user", Content: prepareQuestionContent(diffInfo)},
-		},
-	}
 }
 
 func prepareQuestionContent(diffInfo string) string {
 	return "Please write a commit message for these git changes, " + diffInfo
 }
 
-func CreateModel(url, modelName, key string) *Model {
-	return &Model{url, modelName, key}
-}
-
-func (m *Model) PrePareRequest(diffInfo string) (*http.Request, error) {
-	reqBody := m.prepareRequestBody(diffInfo)
-
-	reqBytes, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode request body: %v", err)
+func CreateModel(llmModel, url, modelName, key string) Model {
+	switch llmModel {
+	case "qwen":
+		return &QWENModel{BaseModel{url: url, modelName: modelName, key: key}}
 	}
-
-	req, err := http.NewRequest(http.MethodPost, m.url, bytes.NewBuffer(reqBytes))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+m.key)
-	req.Header.Set("Content-Type", "application/json")
-
-	return req, nil
+	return nil
 }
