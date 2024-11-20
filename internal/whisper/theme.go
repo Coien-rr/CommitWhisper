@@ -40,39 +40,3 @@ var (
 	ErrorTheme   lipgloss.Style
 	once         sync.Once
 )
-
-func initThemes() {
-	InfoTheme = lipgloss.NewStyle().Italic(true).
-		Foreground(lipgloss.Color(DefaultTheme.Cyan))
-	WarningTheme = lipgloss.NewStyle().Italic(true).
-		Foreground(lipgloss.Color(DefaultTheme.Orange))
-	ErrorTheme = lipgloss.NewStyle().Italic(true).
-		Foreground(lipgloss.Color(DefaultTheme.Red))
-}
-
-func GetTheme(themeType string) lipgloss.Style {
-	once.Do(initThemes)
-
-	switch themeType {
-	case "info":
-		return InfoTheme
-	case "warning":
-		return WarningTheme
-	case "error":
-		return ErrorTheme
-	default:
-		panic("unknown theme type")
-	}
-}
-
-func GetInfoTheme() lipgloss.Style {
-	return GetTheme("info")
-}
-
-func GetWarningTheme() lipgloss.Style {
-	return GetTheme("warning")
-}
-
-func GetErrorTheme() lipgloss.Style {
-	return GetTheme("error")
-}

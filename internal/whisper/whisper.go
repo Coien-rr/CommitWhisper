@@ -81,7 +81,7 @@ func (w *Whisper) GeneratingCommitMessage(req *http.Request) (*http.Response, er
 		Action(action).
 		Run()
 
-	Info("Commit Message Generated!")
+	w.printer.Info("Commit Message Generated!")
 
 	return res, err
 }

@@ -34,16 +34,3 @@ func (p *Printer) Warning(msg string) {
 func (p *Printer) Error(msg string) {
 	fmt.Println(p.errorTheme.Render(fmt.Sprintf("  %v", msg)))
 }
-
-// TODO: refactor it into Printer Object
-func Info(msg string) {
-	fmt.Println(GetInfoTheme().Render(fmt.Sprintf("  %v", msg)))
-}
-
-func Warning(msg string) {
-	fmt.Println(GetWarningTheme().Render(fmt.Sprintf("  %v", msg)))
-}
-
-func Error(msg string) {
-	fmt.Println(GetErrorTheme().Render(fmt.Sprintf("  %v", msg)))
-}
