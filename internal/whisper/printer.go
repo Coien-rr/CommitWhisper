@@ -14,9 +14,9 @@ type Printer struct {
 
 func NewWhisperPrinter() *Printer {
 	return &Printer{
-		infoTheme: lipgloss.NewStyle().Italic(true).
+		infoTheme: lipgloss.NewStyle().
 			Foreground(lipgloss.Color(DefaultTheme.Cyan)),
-		warningTheme: lipgloss.NewStyle().Italic(true).
+		warningTheme: lipgloss.NewStyle().Italic(true).Bold(true).
 			Foreground(lipgloss.Color(DefaultTheme.Orange)),
 		errorTheme: lipgloss.NewStyle().Italic(true).
 			Foreground(lipgloss.Color(DefaultTheme.Red)),
