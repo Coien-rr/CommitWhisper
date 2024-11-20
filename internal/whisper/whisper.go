@@ -102,12 +102,13 @@ func (w *Whisper) ConformGeneratedMessage(generatedCommitMsg string) bool {
 func (w *Whisper) HandleGeneratedCommitMsg(diffInfo string) {
 	for {
 		commitMsg, _ := w.GenerateCommitMessage(diffInfo)
+		w.printer.Info("GenerateCommitMessage: " + commitMsg)
 		switch w.ConformGeneratedMessage(commitMsg) {
 		case true:
-			fmt.Println(commitMsg)
+			copyToClipboard(commitMsg)
+			w.printer.Info("Copied Commit Message into ClipBoard💯")
 			return
 		case false:
-			w.printer.Info("GenerateCommitMessage: " + commitMsg)
 			w.printer.Warning("Not Good Enough, Retry!")
 			continue
 		}
