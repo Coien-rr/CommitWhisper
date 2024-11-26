@@ -1,6 +1,9 @@
 package models
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 type Model interface {
 	PrepareRequest(diffInfo string) (*http.Request, error)
@@ -17,8 +20,8 @@ type Message struct {
 }
 
 type BaseModel struct {
-	url       string
 	modelName string
+	url       string
 	key       string
 }
 
@@ -26,10 +29,14 @@ func prepareQuestionContent(diffInfo string) string {
 	return "Please write a commit message for these git changes, " + diffInfo
 }
 
-func CreateModel(llmModel, url, modelName, key string) Model {
-	switch llmModel {
-	case "qwen":
-		return &QWENModel{BaseModel{url: url, modelName: modelName, key: key}}
+func CreateModel(aiProvider, modelName, url, key string) (Model, error) {
+	switch aiProvider {
+	case "Qwen":
+		return &QWENModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
+	default:
+		return nil, fmt.Errorf(
+			"CreateModelError: %v is unsupported yet, Coming Soon  ",
+			aiProvider,
+		)
 	}
-	return nil
 }

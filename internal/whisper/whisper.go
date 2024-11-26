@@ -14,7 +14,6 @@ import (
 )
 
 type Whisper struct {
-	printer  Printer
 	llmModel models.Model
 }
 
@@ -27,15 +26,25 @@ type ResponseBody struct {
 	} `json:"choices"`
 }
 
-func NewWhisper(url, modelName, key string) *Whisper {
-	return &Whisper{
-		printer:  *NewWhisperPrinter(),
-		llmModel: models.CreateModel("qwen", url, modelName, key),
+func NewWhisper(config Config) *Whisper {
+	if err := config.checkConfig(); err != nil {
+		WhisperPrinter.Error(err.Error())
+		WhisperPrinter.Info("You should reconfig it")
+		return nil
+	}
+
+	if engine, err := models.CreateModel(config.AiProvider, config.ModelName, config.APIUrl, config.APIKey); err == nil {
+		return &Whisper{
+			llmModel: engine,
+		}
+	} else {
+		WhisperPrinter.Warning(err.Error())
+		return nil
 	}
 }
 
 func (w *Whisper) Greet() {
-	w.printer.Info("Hi, This is CommitWhisper🎉")
+	WhisperPrinter.Info("Hi, This is CommitWhisper🎉")
 }
 
 func (w *Whisper) GenerateCommitMessage(diffInfo string) (string, error) {
@@ -81,7 +90,7 @@ func (w *Whisper) GeneratingCommitMessage(req *http.Request) (*http.Response, er
 		Action(action).
 		Run()
 
-	w.printer.Info("Commit Message Generated!")
+	WhisperPrinter.Info("Commit Message Generated!")
 
 	return res, err
 }
@@ -102,14 +111,14 @@ func (w *Whisper) ConformGeneratedMessage(generatedCommitMsg string) bool {
 func (w *Whisper) HandleGeneratedCommitMsg(diffInfo string) {
 	for {
 		commitMsg, _ := w.GenerateCommitMessage(diffInfo)
-		w.printer.Info("GenerateCommitMessage: " + commitMsg)
+		WhisperPrinter.Info("GenerateCommitMessage: " + commitMsg)
 		switch w.ConformGeneratedMessage(commitMsg) {
 		case true:
 			copyToClipboard(commitMsg)
-			w.printer.Info("Copied Commit Message into ClipBoard💯")
+			WhisperPrinter.Info("Copied Commit Message into ClipBoard ✔")
 			return
 		case false:
-			w.printer.Warning("Not Good Enough, Retry!")
+			WhisperPrinter.Warning("Not Good Enough, Retry!")
 			continue
 		}
 	}

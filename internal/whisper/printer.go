@@ -12,6 +12,8 @@ type Printer struct {
 	errorTheme   lipgloss.Style
 }
 
+var WhisperPrinter = NewWhisperPrinter()
+
 func NewWhisperPrinter() *Printer {
 	return &Printer{
 		infoTheme: lipgloss.NewStyle().
