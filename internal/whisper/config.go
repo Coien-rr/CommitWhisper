@@ -31,7 +31,7 @@ func (config *Config) String() string {
 		config.AiProvider,
 		config.ModelName,
 		config.APIUrl,
-		config.APIUrl,
+		config.APIKey,
 	)
 }
 
