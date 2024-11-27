@@ -134,7 +134,7 @@ func (w *Whisper) GenerateAICommitByGitDiff() {
 		WhisperPrinter.Error(err.Error())
 		return
 	} else if diff == "" {
-		WhisperPrinter.Warning("Your Staged Git Diff is Empty, Please add change into staged first  ")
+		WhisperPrinter.Warning("Your Staged Git Diff is Empty, Please add change into staged first  ")
 		return
 	}
 	w.handleGeneratedCommitMsg(diff)
