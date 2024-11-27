@@ -1,4 +1,4 @@
-package whisper
+package utils
 
 import (
 	"fmt"
@@ -12,9 +12,7 @@ type Printer struct {
 	errorTheme   lipgloss.Style
 }
 
-var WhisperPrinter = NewWhisperPrinter()
-
-func NewWhisperPrinter() *Printer {
+func NewPrinter() *Printer {
 	return &Printer{
 		infoTheme: lipgloss.NewStyle().
 			Foreground(lipgloss.Color(DefaultTheme.Cyan)),

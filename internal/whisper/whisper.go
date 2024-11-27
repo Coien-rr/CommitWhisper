@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Coien-rr/CommitWhisper/internal/git"
 	"github.com/Coien-rr/CommitWhisper/internal/models"
+	"github.com/Coien-rr/CommitWhisper/pkg/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/charmbracelet/lipgloss"
@@ -25,6 +27,8 @@ type ResponseBody struct {
 		} `json:"message"`
 	} `json:"choices"`
 }
+
+var WhisperPrinter = utils.NewPrinter()
 
 func NewWhisper(config Config) *Whisper {
 	if err := config.checkConfig(); err != nil {
@@ -47,9 +51,9 @@ func (w *Whisper) Greet() {
 	WhisperPrinter.Info("Hi, This is CommitWhisper🎉")
 }
 
-func (w *Whisper) GenerateCommitMessage(diffInfo string) (string, error) {
+func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
 	req, err := w.llmModel.PrepareRequest(diffInfo)
-	resp, err := w.GeneratingCommitMessage(req)
+	resp, err := w.generatingCommitMessage(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request: %v", err)
 	}
@@ -73,7 +77,7 @@ func (w *Whisper) GenerateCommitMessage(diffInfo string) (string, error) {
 	return response.Choices[0].Message.Content, nil
 }
 
-func (w *Whisper) GeneratingCommitMessage(req *http.Request) (*http.Response, error) {
+func (w *Whisper) generatingCommitMessage(req *http.Request) (*http.Response, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -95,7 +99,7 @@ func (w *Whisper) GeneratingCommitMessage(req *http.Request) (*http.Response, er
 	return res, err
 }
 
-func (w *Whisper) ConformGeneratedMessage(generatedCommitMsg string) bool {
+func (w *Whisper) conformGeneratedMessage(generatedCommitMsg string) bool {
 	var confirm bool
 
 	huh.NewConfirm().
@@ -108,11 +112,11 @@ func (w *Whisper) ConformGeneratedMessage(generatedCommitMsg string) bool {
 	return confirm
 }
 
-func (w *Whisper) HandleGeneratedCommitMsg(diffInfo string) {
+func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 	for {
-		commitMsg, _ := w.GenerateCommitMessage(diffInfo)
+		commitMsg, _ := w.generateCommitMessage(diffInfo)
 		WhisperPrinter.Info("GenerateCommitMessage: " + commitMsg)
-		switch w.ConformGeneratedMessage(commitMsg) {
+		switch w.conformGeneratedMessage(commitMsg) {
 		case true:
 			copyToClipboard(commitMsg)
 			WhisperPrinter.Info("Copied Commit Message into ClipBoard ✔")
@@ -122,4 +126,16 @@ func (w *Whisper) HandleGeneratedCommitMsg(diffInfo string) {
 			continue
 		}
 	}
+}
+
+func (w *Whisper) GenerateAICommitByGitDiff() {
+	diff, err := git.GetGitDiff()
+	if err != nil {
+		WhisperPrinter.Error(err.Error())
+		return
+	} else if diff == "" {
+		WhisperPrinter.Warning("Your Staged Git Diff is Empty, Please add change into staged first  ")
+		return
+	}
+	w.handleGeneratedCommitMsg(diff)
 }

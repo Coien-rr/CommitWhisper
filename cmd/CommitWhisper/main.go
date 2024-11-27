@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/Coien-rr/CommitWhisper/internal/git"
 	"github.com/Coien-rr/CommitWhisper/internal/whisper"
 	"github.com/urfave/cli/v2"
 )
@@ -16,14 +15,9 @@ func main() {
 		Action: func(*cli.Context) error {
 			config := whisper.GetConfig()
 
-			diff, err := git.GetGitDiff()
-			if err != nil {
-				log.Fatal(err)
-			}
-
 			if w := whisper.NewWhisper(config); w != nil {
 				w.Greet()
-				w.HandleGeneratedCommitMsg(diff)
+				w.GenerateAICommitByGitDiff()
 			} else {
 				return nil
 			}

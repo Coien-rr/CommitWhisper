@@ -19,7 +19,12 @@ func main() {
 
 			diff, err := git.GetGitDiff()
 			if err != nil {
-				log.Fatal(err)
+				whisper.WhisperPrinter.Error("'git diff HEAD' get empty res")
+			}
+
+			if diff == "" {
+				whisper.WhisperPrinter.Error("'git diff HEAD' get empty res")
+				return nil
 			}
 
 			if w := whisper.NewWhisper(config); w != nil {
