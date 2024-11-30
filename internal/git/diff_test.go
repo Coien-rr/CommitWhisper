@@ -13,7 +13,7 @@ import (
 func TestGetChangedFiles(t *testing.T) {
 	dir, removeDirFunc := createTempGitDir(t)
 	defer removeDirFunc()
-	gotFiles, err := getChangedFiles(dir)
+	gotFiles, err := getUnstagedChangedFiles(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
