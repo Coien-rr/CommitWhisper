@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Coien-rr/CommitWhisper/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
 
@@ -71,8 +72,8 @@ func GetConfig() Config {
 		for {
 			config = showMenu()
 			if err := config.checkConfig(); err != nil {
-				WhisperPrinter.Error(err.Error())
-				WhisperPrinter.Info("Please Config Whisper Again  ")
+				utils.WhisperPrinter.Error(err.Error())
+				utils.WhisperPrinter.Info("Please Config Whisper Again  ")
 			} else {
 				break
 			}
@@ -94,16 +95,16 @@ func ReConfig() {
 	if isConfigFileExist() {
 		config, err := getEnvConfigFromDotFile()
 		if err != nil {
-			WhisperPrinter.Error(err.Error())
+			utils.WhisperPrinter.Error(err.Error())
 			return
 		}
-		WhisperPrinter.Info(fmt.Sprintf("The current config:\n%s", &config))
+		utils.WhisperPrinter.Info(fmt.Sprintf("The current config:\n%s", &config))
 		var newConfig Config
 		for {
 			newConfig = reconfigMenu(config)
 			if err := newConfig.checkConfig(); err != nil {
-				WhisperPrinter.Error(err.Error())
-				WhisperPrinter.Info("Please Config Whisper Again  ")
+				utils.WhisperPrinter.Error(err.Error())
+				utils.WhisperPrinter.Info("Please Config Whisper Again  ")
 			} else {
 				break
 			}
@@ -111,8 +112,8 @@ func ReConfig() {
 		// TODO: Set to goroutine
 		setEnvConfigToDotFile(newConfig)
 	} else {
-		WhisperPrinter.Warning("The configuration file does not exist yet! ")
-		WhisperPrinter.Info("Please start commitwhisper and follow the prompts to configure")
+		utils.WhisperPrinter.Warning("The configuration file does not exist yet! ")
+		utils.WhisperPrinter.Info("Please start commitwhisper and follow the prompts to configure")
 	}
 }
 
@@ -120,12 +121,12 @@ func ShowConfig() {
 	if isConfigFileExist() {
 		config, err := getEnvConfigFromDotFile()
 		if err != nil {
-			WhisperPrinter.Error(err.Error())
+			utils.WhisperPrinter.Error(err.Error())
 			return
 		}
-		WhisperPrinter.Info(fmt.Sprintf("The current config:\n%s", &config))
+		utils.WhisperPrinter.Info(fmt.Sprintf("The current config:\n%s", &config))
 	} else {
-		WhisperPrinter.Warning("The configuration file does not exist yet! ")
-		WhisperPrinter.Info("Please start commitwhisper and follow the prompts to configure")
+		utils.WhisperPrinter.Warning("The configuration file does not exist yet! ")
+		utils.WhisperPrinter.Info("Please start commitwhisper and follow the prompts to configure")
 	}
 }

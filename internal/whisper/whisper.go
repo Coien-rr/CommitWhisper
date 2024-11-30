@@ -28,12 +28,10 @@ type ResponseBody struct {
 	} `json:"choices"`
 }
 
-var WhisperPrinter = utils.NewPrinter()
-
 func NewWhisper(config Config) *Whisper {
 	if err := config.checkConfig(); err != nil {
-		WhisperPrinter.Error(err.Error())
-		WhisperPrinter.Info("You should reconfig it")
+		utils.WhisperPrinter.Error(err.Error())
+		utils.WhisperPrinter.Info("You should reconfig it")
 		return nil
 	}
 
@@ -42,13 +40,13 @@ func NewWhisper(config Config) *Whisper {
 			llmModel: engine,
 		}
 	} else {
-		WhisperPrinter.Warning(err.Error())
+		utils.WhisperPrinter.Warning(err.Error())
 		return nil
 	}
 }
 
 func (w *Whisper) Greet() {
-	WhisperPrinter.Info("Hi, This is CommitWhisper🎉")
+	utils.WhisperPrinter.Info("Hi, This is CommitWhisper🎉")
 }
 
 func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
@@ -94,7 +92,7 @@ func (w *Whisper) generatingCommitMessage(req *http.Request) (*http.Response, er
 		Action(action).
 		Run()
 
-	WhisperPrinter.Info("Commit Message Generated!")
+	utils.WhisperPrinter.Info("Commit Message Generated!")
 
 	return res, err
 }
@@ -115,14 +113,14 @@ func (w *Whisper) conformGeneratedMessage(generatedCommitMsg string) bool {
 func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 	for {
 		commitMsg, _ := w.generateCommitMessage(diffInfo)
-		WhisperPrinter.Info("GenerateCommitMessage: " + commitMsg)
+		utils.WhisperPrinter.Info("GenerateCommitMessage: " + commitMsg)
 		switch w.conformGeneratedMessage(commitMsg) {
 		case true:
 			copyToClipboard(commitMsg)
-			WhisperPrinter.Info("Copied Commit Message into ClipBoard ✔")
+			utils.WhisperPrinter.Info("Copied Commit Message into ClipBoard ✔")
 			return
 		case false:
-			WhisperPrinter.Warning("Not Good Enough, Retry!")
+			utils.WhisperPrinter.Warning("Not Good Enough, Retry!")
 			continue
 		}
 	}
@@ -131,10 +129,10 @@ func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 func (w *Whisper) GenerateAICommitByGitDiff() {
 	diff, err := git.GetGitDiff()
 	if err != nil {
-		WhisperPrinter.Error(err.Error())
+		utils.WhisperPrinter.Error(err.Error())
 		return
 	} else if diff == "" {
-		WhisperPrinter.Warning("Your Staged Git Diff is Empty, Please add change into staged first  ")
+		utils.WhisperPrinter.Info("Working tree clean,Nothing to commit ")
 		return
 	}
 	w.handleGeneratedCommitMsg(diff)
