@@ -4,83 +4,38 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"time"
 )
 
-type RequestBody struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
+type QWENModel struct {
+	BaseModel
 }
 
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-type ResponseBody struct {
-	Choices []struct {
-		Message struct {
-			Role    string `json:"role"`
-			Content string `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
-}
-
-func PrepareRequestBody(model, diffInfo string) RequestBody {
+func (m *QWENModel) prepareRequestBody(diffInfo string) RequestBody {
 	return RequestBody{
-		Model: model,
+		Model: m.modelName,
 		Messages: []Message{
-			{Role: "system", Content: "You are a helpful assistant."},
-			{Role: "user", Content: PrepareQuestionContent(diffInfo)},
+			{Role: "system", Content: GetSystemPrompt()},
+			{Role: "user", Content: prepareQuestionContent(diffInfo)},
 		},
 	}
 }
 
-func PrepareQuestionContent(diffInfo string) string {
-	return "Please write a commit message for these git changes, " + diffInfo
-}
-
-func GetModelResponse(url, model, key, diffInfo string) (string, error) {
-	reqBody := PrepareRequestBody(model, diffInfo)
+func (m *QWENModel) PrepareRequest(diffInfo string) (*http.Request, error) {
+	reqBody := m.prepareRequestBody(diffInfo)
 
 	reqBytes, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("failed to encode request body: %v", err)
+		return nil, fmt.Errorf("failed to encode request body: %v", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBytes))
+	req, err := http.NewRequest(http.MethodPost, m.url, bytes.NewBuffer(reqBytes))
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %v", err)
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+key)
+	req.Header.Set("Authorization", "Bearer "+m.key)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to send request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("received non-200 response: %v", resp.Status)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %v", err)
-	}
-
-	var response ResponseBody
-	if err := json.Unmarshal(body, &response); err != nil {
-		return "", fmt.Errorf("failed to parse response JSON: %v", err)
-	}
-
-	return response.Choices[0].Message.Content, nil
+	return req, nil
 }
