@@ -10,7 +10,7 @@ import (
 
 func main() {
 	app := &cli.App{
-		Name:  "commitwhisper",
+		Name:  "cw",
 		Usage: "Generate AI Commit By LLM Using Git Diff Info",
 		Action: func(*cli.Context) error {
 			config := whisper.GetConfig()
