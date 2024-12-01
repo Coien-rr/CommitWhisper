@@ -114,13 +114,12 @@ func getDiffDetails() (string, error) {
 
 func getDiffFiles() ([]string, error) {
 	gitDiffFilesCmd := exec.Command("git", "diff", "--staged", "--name-only")
-	diffFiles, err := gitDiffFilesCmd.Output()
+	gitDiffFilesOut, err := gitDiffFilesCmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to run [git diff --staged --name-only] : %w", err)
 	}
 
-	stagedFiles := make([]string, 0)
-	stagedFiles = append(stagedFiles, strings.Split(string(diffFiles), "\n")...)
+	stagedFiles := splitFilesFromOutput(gitDiffFilesOut)
 
 	return stagedFiles, nil
 }
@@ -150,4 +149,16 @@ func notifyUnStagedFiles(unstagedFiles []string) {
 			unstagedFiles,
 		)
 	}
+}
+
+func splitFilesFromOutput(buf []byte) []string {
+	files := strings.Split(string(buf), "\n")
+	filterFiles := make([]string, 0)
+	for _, file := range files {
+		if file != "" {
+			filterFiles = append(filterFiles, file)
+		}
+	}
+
+	return filterFiles
 }
