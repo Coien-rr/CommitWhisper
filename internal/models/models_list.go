@@ -1,7 +1,5 @@
 package models
 
-const MyAPIKEY = "sk-502bbd61da624094920ce1c00375f45f"
-
 var ModelsList = map[string][]string{
 	"Qwen": {
 		"qwen-coder-plus",
