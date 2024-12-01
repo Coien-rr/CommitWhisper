@@ -8,7 +8,7 @@ BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 go = GOGC=off go
 MODULE = $(shell env GO111MODULE=on go list -m)
 
-LDFLAGS += -X "$(MODULE)/common.Version=$(VERSION)" -X "$(MODULE)/common.CommitSHA=$(VERSION_HASH)" -X "$(MODULE)/common.BuildDate=$(DATE)"
+LDFLAGS = -X "$(MODULE)/common.Version=$(VERSION)" -X "$(MODULE)/common.CommitSHA=$(VERSION_HASH)" -X "$(MODULE)/common.BuildDate=$(DATE)"
 
 .PHONY: build
 build: ## Build
