@@ -16,8 +16,7 @@ func main() {
 			config := whisper.GetConfig()
 
 			if w := whisper.NewWhisper(config); w != nil {
-				w.Greet()
-				w.GenerateAICommitByGitDiff()
+				w.Run()
 			} else {
 				return nil
 			}

@@ -9,6 +9,20 @@ import (
 	"github.com/Coien-rr/CommitWhisper/pkg/utils"
 )
 
+func IsGitRepo() bool {
+	statusCmd := exec.Command("git", "status")
+	out, err := statusCmd.CombinedOutput()
+	if err != nil &&
+		strings.Contains(
+			string(out),
+			"fatal: not a git repository (or any of the parent directories): .git",
+		) {
+		return false
+	}
+
+	return true
+}
+
 func GetGitDiff() (string, error) {
 	changedFiles, err := getUnstagedChangedFiles("./")
 	if err != nil {
@@ -45,6 +59,7 @@ func getUnstagedChangedFiles(dirPath string) ([]string, error) {
 			continue
 		}
 		files = append(files, file+"(󱙝 Untracked)")
+
 	}
 
 	filteredFiles := make([]string, 0)
@@ -95,6 +110,7 @@ func getDiff(diffFiles []string) (string, error) {
 		return "", fmt.Errorf("RuntimeError: %w", err)
 	}
 
+	// TODO: refactor
 	notifyUnStagedFiles(diffFiles)
 	notifyStagedFiles(diffStagedFiles)
 

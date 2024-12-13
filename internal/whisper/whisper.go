@@ -45,8 +45,24 @@ func NewWhisper(config Config) *Whisper {
 	}
 }
 
-func (w *Whisper) Greet() {
+func (w *Whisper) greet() {
 	utils.WhisperPrinter.Info("Hi, This is CommitWhisper🎉")
+}
+
+func (w *Whisper) checkIsGitRepo() bool {
+	if !git.IsGitRepo() {
+		utils.WhisperPrinter.Warning("The current workspace is not a valid Git repository 👻")
+		utils.WhisperPrinter.Info("Please use 'cw' within a Git repository 🤙")
+		return false
+	}
+	return true
+}
+
+func (w *Whisper) Run() {
+	w.greet()
+	if w.checkIsGitRepo() {
+		w.generateAICommitByGitDiff()
+	}
 }
 
 func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
@@ -126,7 +142,7 @@ func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 	}
 }
 
-func (w *Whisper) GenerateAICommitByGitDiff() {
+func (w *Whisper) generateAICommitByGitDiff() {
 	diff, err := git.GetGitDiff()
 	if err != nil {
 		utils.WhisperPrinter.Error(err.Error())
