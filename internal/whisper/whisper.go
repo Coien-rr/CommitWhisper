@@ -2,6 +2,7 @@ package whisper
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/Coien-rr/CommitWhisper/internal/git"
 	"github.com/Coien-rr/CommitWhisper/internal/models"
+	selfErr "github.com/Coien-rr/CommitWhisper/pkg/errors"
 	"github.com/Coien-rr/CommitWhisper/pkg/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
@@ -28,6 +30,18 @@ type ResponseBody struct {
 	} `json:"choices"`
 }
 
+type errResponseBody struct {
+	ErrorMsg  errorMsg `json:"error"`
+	RequestID string   `json:"request_id"`
+}
+
+type errorMsg struct {
+	Message string `json:"message"`
+	Type    string `json:"type"`
+	Param   any    `json:"param"`
+	Code    string `json:"code"`
+}
+
 func NewWhisper(config Config) *Whisper {
 	if err := config.checkConfig(); err != nil {
 		utils.WhisperPrinter.Error(err.Error())
@@ -45,8 +59,24 @@ func NewWhisper(config Config) *Whisper {
 	}
 }
 
-func (w *Whisper) Greet() {
+func (w *Whisper) greet() {
 	utils.WhisperPrinter.Info("Hi, This is CommitWhisper🎉")
+}
+
+func (w *Whisper) checkIsGitRepo() bool {
+	if !git.IsGitRepo() {
+		utils.WhisperPrinter.Warning("The current workspace is not a valid Git repository 👻")
+		utils.WhisperPrinter.Info("Please use 'cw' within a Git repository 🤙")
+		return false
+	}
+	return true
+}
+
+func (w *Whisper) Run() {
+	w.greet()
+	if w.checkIsGitRepo() {
+		w.generateAICommitByGitDiff()
+	}
 }
 
 func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
@@ -58,21 +88,34 @@ func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("received non-200 response: %v", resp.Status)
-	}
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %v", err)
+		return "", fmt.Errorf("ERROR(generateCommitMessage): failed to read response body: %v", err)
 	}
 
-	var response ResponseBody
-	if err := json.Unmarshal(body, &response); err != nil {
-		return "", fmt.Errorf("failed to parse response JSON: %v", err)
-	}
+	switch resp.StatusCode {
+	case http.StatusOK:
+		var response ResponseBody
+		if err := json.Unmarshal(body, &response); err != nil {
+			return "", fmt.Errorf(
+				"ERROR(generateCommitMessage): failed to parse response JSON: %v",
+				err,
+			)
+		}
+		return response.Choices[0].Message.Content, nil
+	case http.StatusUnauthorized:
+		var response errResponseBody
+		if err := json.Unmarshal(body, &response); err != nil {
+			return "", fmt.Errorf(
+				"ERROR(generateCommitMessage): failed to parse response JSON: %v",
+				err,
+			)
+		}
 
-	return response.Choices[0].Message.Content, nil
+		return "", selfErr.ErrInvalidKey
+	default:
+		return "", nil
+	}
 }
 
 func (w *Whisper) generatingCommitMessage(req *http.Request) (*http.Response, error) {
@@ -92,8 +135,6 @@ func (w *Whisper) generatingCommitMessage(req *http.Request) (*http.Response, er
 		Action(action).
 		Run()
 
-	utils.WhisperPrinter.Info("Commit Message Generated!")
-
 	return res, err
 }
 
@@ -112,7 +153,16 @@ func (w *Whisper) conformGeneratedMessage(generatedCommitMsg string) bool {
 
 func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 	for {
-		commitMsg, _ := w.generateCommitMessage(diffInfo)
+		commitMsg, err := w.generateCommitMessage(diffInfo)
+		if err != nil {
+			if errors.Is(err, selfErr.ErrInvalidKey) {
+				utils.WhisperPrinter.Error(
+					"Invalid API Key. Please check the relevant config.",
+				)
+			}
+			return
+		}
+		utils.WhisperPrinter.Info("Commit Message Generated!")
 		utils.WhisperPrinter.Info("GenerateCommitMessage: " + commitMsg)
 		switch w.conformGeneratedMessage(commitMsg) {
 		case true:
@@ -126,7 +176,7 @@ func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 	}
 }
 
-func (w *Whisper) GenerateAICommitByGitDiff() {
+func (w *Whisper) generateAICommitByGitDiff() {
 	diff, err := git.GetGitDiff()
 	if err != nil {
 		utils.WhisperPrinter.Error(err.Error())
