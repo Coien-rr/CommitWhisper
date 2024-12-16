@@ -2,54 +2,92 @@ package git
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Coien-rr/CommitWhisper/pkg/utils"
 )
 
-func IsGitRepo() bool {
-	statusCmd := exec.Command("git", "status")
-	out, err := statusCmd.CombinedOutput()
-	if err != nil &&
-		strings.Contains(
-			string(out),
-			"fatal: not a git repository (or any of the parent directories): .git",
-		) {
-		return false
+var (
+	gitRepoPath string
+	once        sync.Once
+)
+
+func discoveryRepoPath() {
+	gitRepoPath = ""
+	curPath, err := os.Getwd()
+	if err != nil {
+		return
 	}
 
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+
+	for {
+		if curPath == userHomeDir || curPath == "/" {
+			return
+		}
+
+		gitDir := filepath.Join(curPath, ".git")
+
+		if _, err = os.Stat(gitDir); err == nil {
+			gitRepoPath = curPath
+			return
+		}
+
+		curPath = filepath.Dir(curPath)
+	}
+}
+
+func getRepoPath() string {
+	once.Do(discoveryRepoPath)
+	return gitRepoPath
+}
+
+func IsGitRepo() bool {
+	if repoPath := getRepoPath(); repoPath == "" {
+		return false
+	}
 	return true
 }
 
 func GetGitDiff() (string, error) {
-	changedFiles, err := getUnstagedChangedFiles("./")
+	unstagedFiles, err := getUnstagedFiles(getRepoPath())
 	if err != nil {
 		return "", fmt.Errorf("GetGitDiffError: %w", err)
 	}
 
-	diffInfo, err := getDiff(changedFiles)
+	stagedFiles, err := getStagedFiles(getRepoPath())
 	if err != nil {
 		return "", fmt.Errorf("GetGitDiffError: %w", err)
 	}
 
-	return diffInfo, nil
+	stagedFiles, excludedFiles := excludeFiles(stagedFiles)
+
+	notifyFiles(unstagedFiles, stagedFiles, excludedFiles)
+
+	return getStagedDiffDetails(stagedFiles, getRepoPath())
 }
 
-func getUnstagedChangedFiles(dirPath string) ([]string, error) {
+func getUnstagedFiles(repoPath string) ([]string, error) {
 	modifiedCmd := exec.Command("git", "ls-files", "--modified")
-	modifiedCmd.Dir = dirPath
+	modifiedCmd.Dir = repoPath
 	modifiedOut, err := modifiedCmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("GetChangedFilesError(modified): %w", err)
+		return nil, fmt.Errorf("getUnstagedFilesError(modified): %w", err)
 	}
 
 	otherCmd := exec.Command("git", "ls-files", "--other", "--exclude-standard")
-	otherCmd.Dir = dirPath
+	otherCmd.Dir = repoPath
 	otherOut, err := otherCmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("GetChangedFilesError(other): %w", err)
+		return nil, fmt.Errorf("getUnstagedFilesError(other): %w", err)
 	}
 
 	files := make([]string, 0)
@@ -74,7 +112,20 @@ func getUnstagedChangedFiles(dirPath string) ([]string, error) {
 	return filteredFiles, nil
 }
 
-func getDiff(diffFiles []string) (string, error) {
+func getStagedFiles(repoPath string) ([]string, error) {
+	getStagedFilesCmd := exec.Command("git", "diff", "--staged", "--name-only")
+	getStagedFilesCmd.Dir = repoPath
+	gitDiffFilesOut, err := getStagedFilesCmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("getStagedFilesError: %w", err)
+	}
+
+	stagedFiles := splitFilesFromOutput(gitDiffFilesOut)
+
+	return stagedFiles, nil
+}
+
+func excludeFiles(stagedFiles []string) (includedFiles, excludedFiles []string) {
 	excludeExtensions := []string{
 		".lock",
 		"-lock.",
@@ -86,58 +137,50 @@ func getDiff(diffFiles []string) (string, error) {
 		".gif",
 	}
 
-	excludedFiles := make([]string, 0)
-
-	for _, file := range diffFiles {
+	for _, file := range stagedFiles {
+		isExcluded := false
 		for _, excludeExt := range excludeExtensions {
 			if strings.Contains(file, excludeExt) {
-				excludedFiles = append(excludedFiles, file)
+				isExcluded = true
+				break
 			}
 		}
-	}
-
-	notifyExcludedFiles(excludedFiles)
-
-	filesWithoutLocks := make([]string, 0)
-	for _, file := range diffFiles {
-		if !strings.Contains(file, ".lock") && !strings.Contains(file, "-lock.") {
-			filesWithoutLocks = append(filesWithoutLocks, file)
+		if isExcluded {
+			excludedFiles = append(excludedFiles, file)
+		} else {
+			includedFiles = append(includedFiles, file)
 		}
 	}
 
-	diffStagedFiles, err := getDiffFiles()
-	if err != nil {
-		return "", fmt.Errorf("RuntimeError: %w", err)
-	}
-
-	// TODO: refactor
-	notifyUnStagedFiles(diffFiles)
-	notifyStagedFiles(diffStagedFiles)
-
-	return getDiffDetails()
+	return
 }
 
-func getDiffDetails() (string, error) {
-	gitDiffCmd := exec.Command("git", "diff", "--staged", "--")
-	// gitDiffCmd.Args = append(gitDiffCmd.Args, filesWithoutLocks...)
-	diffDetails, err := gitDiffCmd.Output()
+// func getDiff(diffFiles []string) (string, error) {
+// 	filesWithoutLocks := make([]string, 0)
+// 	for _, file := range diffFiles {
+// 		if !strings.Contains(file, ".lock") && !strings.Contains(file, "-lock.") {
+// 			filesWithoutLocks = append(filesWithoutLocks, file)
+// 		}
+// 	}
+// 	return "", nil
+// }
+
+func getStagedDiffDetails(stagedFiles []string, repoPath string) (string, error) {
+	getStagedDiffCmd := exec.Command("git", "diff", "--staged")
+	getStagedDiffCmd.Dir = repoPath
+	getStagedDiffCmd.Args = append(getStagedDiffCmd.Args, stagedFiles...)
+	diffDetails, err := getStagedDiffCmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to run git diff: %w", err)
+		return "", fmt.Errorf("getDiffDetailsError: %w", err)
 	}
 
 	return string(diffDetails), nil
 }
 
-func getDiffFiles() ([]string, error) {
-	gitDiffFilesCmd := exec.Command("git", "diff", "--staged", "--name-only")
-	gitDiffFilesOut, err := gitDiffFilesCmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to run [git diff --staged --name-only] : %w", err)
-	}
-
-	stagedFiles := splitFilesFromOutput(gitDiffFilesOut)
-
-	return stagedFiles, nil
+func notifyFiles(unstagedFiles, stagedFiles, excludedFiles []string) {
+	notifyUnStagedFiles(unstagedFiles)
+	notifyExcludedFiles(excludedFiles)
+	notifyStagedFiles(stagedFiles)
 }
 
 func notifyExcludedFiles(excludedFiles []string) {
@@ -152,7 +195,7 @@ func notifyExcludedFiles(excludedFiles []string) {
 func notifyStagedFiles(stagedFiles []string) {
 	if len(stagedFiles) != 0 {
 		utils.WhisperPrinter.InfoDisplayLists(
-			"Commit messages are generated for these staged files:",
+			"Commit messages are generated for these Staged files:",
 			stagedFiles,
 		)
 	}
@@ -161,7 +204,7 @@ func notifyStagedFiles(stagedFiles []string) {
 func notifyUnStagedFiles(unstagedFiles []string) {
 	if len(unstagedFiles) != 0 {
 		utils.WhisperPrinter.WarningDisplayLists(
-			"Some unstaged changes of these files will not be used for Commit messages generating:",
+			"Unstaged changes of these files will not be used for Commit messages generating:",
 			unstagedFiles,
 		)
 	}
