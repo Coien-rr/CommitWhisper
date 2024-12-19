@@ -8,17 +8,23 @@
 - 🔍 Get Diff Info From Staged Files
 - 🌈 Interactive configuration selection for easy model switching.
 - 🌅 Supports **Chinese AI providers**, Such as: 
+  - [ChatGPT](https://platform.openai.com/docs/models) From `OpenAI`
+  - 💤 [Claude](https://claude.ai/chats) From `Anthropic`
+  - 💤 [Gemini](https://ai.google.dev/gemini-api/docs) From `Google`
+  - 💤 More
+- 🚀 Especially supports **Chinese AI providers**, Such as: 
   - [Tongyi Qianwen(通义千问)](https://www.aliyun.com/product/bailian) From `Alibaba`
-  - [Doubao(豆包)](https://www.volcengine.com/product/doubao) From `ByteDance`
+  - 💤 [Doubao(豆包)](https://www.volcengine.com/product/doubao) From `ByteDance`
+  - 💤 More
 - 💬 [TODO] Interactive prompts allow the model to refine generated messages.
 - ⏳ Coming Soon More
 
 ### :jigsaw: Supported Ai Provider
 | LLMs              | Refer To Get API KEY |
 | ----------------- | -------------------- |
-| Qianwen           | ✅ [Get Your Key](https://www.aliyun.com/product/bailian)      |
+| Qianwen           | ✅ [Get Your Key](https://www.aliyun.com/product/bailian)|
+| OpenAI            | ✅ [Get Your Key](https://platform.openai.com)|
 | Doubao            | 💤 Coming Soon       |
-| OpenAI            | 💤 Coming Soon       |
 | Claude            | 💤 Coming Soon       |
 
 ## 🔥 Status
@@ -64,7 +70,7 @@ APIKey: [Please Put Your API Key Here]
 
 ## :crystal_ball: RoadMap
 *💡 Ideas to explore*
-- [ ] Support More AiProvider, Such as OpenAI, etc
+- [ ] Support More AiProvider, Such as OpenAI✅, Claude💤, etc.(*In Process*)
 - [ ] Generate more detailed commit descriptions(multi-lines commit).
 - [ ] Explain the purpose of code changes compare two commit.
 - [ ] Interactive prompts allow the model to refine generated messages.
