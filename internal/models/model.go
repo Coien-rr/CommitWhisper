@@ -33,6 +33,8 @@ func CreateModel(aiProvider, modelName, url, key string) (Model, error) {
 	switch aiProvider {
 	case "Qwen":
 		return &QWENModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
+	case "OpenAI":
+		return &OpenAIModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
 	default:
 		return nil, fmt.Errorf(
 			"CreateModelError: %v is unsupported yet, Coming Soon  ",

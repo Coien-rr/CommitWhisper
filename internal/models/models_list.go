@@ -1,6 +1,20 @@
 package models
 
+var AiProviderList = []string{
+	"OpenAI",
+	"Qwen",
+	"Doubao",
+}
+
 var ModelsList = map[string][]string{
+	"OpenAI": {
+		"gpt-4o-mini",
+		"gpt-4o-latest",
+		"o1-preview",
+		"o1-mini",
+		"gpt-4-turbo",
+		"gpt-4",
+	},
 	"Qwen": {
 		"qwen-coder-plus",
 		"qwen-coder-plus-latest",
@@ -37,6 +51,7 @@ var ModelsList = map[string][]string{
 
 var ModelsURLList = map[string]string{
 	"Qwen":    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+	"OpenAI":  "https://api.openai.com/v1/chat/completions",
 	"Doubao":  "doubao TODO",
 	"Skylark": "doubao TODO",
 }
