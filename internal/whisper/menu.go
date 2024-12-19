@@ -12,11 +12,13 @@ func showMenu() Config {
 	var confirm bool
 	huh.NewForm(
 		huh.NewGroup(
-			huh.NewSelect[string]().Options(huh.NewOptions(
-				"Qwen", "Doubao", "Skylark")...).
+			huh.NewSelect[string]().
 				Value(&aiProvider).
 				Title("Choose Your AiProvider").
-				Height(5),
+				Height(5).
+				OptionsFunc(func() []huh.Option[string] {
+					return huh.NewOptions(models.AiProviderList...)
+				}, nil),
 			huh.NewSelect[string]().
 				Value(&modelName).
 				Height(8).
@@ -38,34 +40,29 @@ func showMenu() Config {
 	}
 }
 
-func reconfigMenu(config Config) Config {
-	aiProvider, modelName, apiKey := config.AiProvider, config.ModelName, config.APIKey
+func reconfigMenu(config *Config) {
+	// aiProvider, modelName, apiKey := config.AiProvider, config.ModelName, config.APIKey
 	var confirm bool
 	huh.NewForm(
 		huh.NewGroup(
-			huh.NewSelect[string]().Options(huh.NewOptions(
-				"Qwen", "Doubao", "Skylark")...).
-				Value(&aiProvider).
-				Title("Choose Your AiProvider").
-				Height(5),
 			huh.NewSelect[string]().
-				Value(&modelName).
+				Value(&config.AiProvider).
+				Title("Choose Your AiProvider").
+				Height(5).OptionsFunc(func() []huh.Option[string] {
+				return huh.NewOptions(models.AiProviderList...)
+			}, nil),
+			huh.NewSelect[string]().
+				Value(&config.ModelName).
 				Height(8).
 				Title("Choose Your Model").
 				OptionsFunc(func() []huh.Option[string] {
-					s := models.ModelsList[aiProvider]
+					s := models.ModelsList[config.AiProvider]
 					time.Sleep(500 * time.Millisecond)
 					return huh.NewOptions(s...)
-				}, &aiProvider),
-			huh.NewInput().Title("Enter Your API Key").Value(&apiKey),
+				}, &config.AiProvider),
+			huh.NewInput().Title("Enter Your API Key").Value(&config.APIKey),
 			huh.NewConfirm().Title("Confirm Config?").Value(&confirm),
 		),
 	).Run()
 	// TODO: add config check
-	return Config{
-		AiProvider: aiProvider,
-		ModelName:  modelName,
-		APIUrl:     models.ModelsURLList[aiProvider],
-		APIKey:     apiKey,
-	}
 }

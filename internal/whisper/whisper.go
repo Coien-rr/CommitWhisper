@@ -22,12 +22,26 @@ type Whisper struct {
 }
 
 type ResponseBody struct {
-	Choices []struct {
-		Message struct {
-			Role    string `json:"role"`
-			Content string `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
+	Choices []Choices `json:"choices"`
+	// Choices []struct {
+	// 	Message struct {
+	// 		Role    string `json:"role"`
+	// 		Content string `json:"content"`
+	// 	} `json:"message"`
+	// } `json:"choices"`
+}
+
+type Choices struct {
+	Message Message `json:"message"`
+	// Logprobs     interface{} `json:"logprobs"`
+	// FinishReason string      `json:"finish_reason"`
+	// Index        int         `json:"index"`
+}
+
+type Message struct {
+	// Refusal interface{} `json:"refusal"`
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 type errResponseBody struct {
@@ -93,8 +107,7 @@ func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
 		return "", fmt.Errorf("ERROR(generateCommitMessage): failed to read response body: %v", err)
 	}
 
-	switch resp.StatusCode {
-	case http.StatusOK:
+	if resp.StatusCode == http.StatusOK {
 		var response ResponseBody
 		if err := json.Unmarshal(body, &response); err != nil {
 			return "", fmt.Errorf(
@@ -103,7 +116,7 @@ func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
 			)
 		}
 		return response.Choices[0].Message.Content, nil
-	case http.StatusUnauthorized:
+	} else {
 		var response errResponseBody
 		if err := json.Unmarshal(body, &response); err != nil {
 			return "", fmt.Errorf(
@@ -111,16 +124,28 @@ func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
 				err,
 			)
 		}
+		switch resp.StatusCode {
+		case http.StatusUnauthorized:
+			return "", selfErr.ErrInvalidKey
 
-		return "", selfErr.ErrInvalidKey
-	default:
-		return "", nil
+		case http.StatusNotFound:
+			// TODO: model not found error
+			return "", selfErr.NewNotFoundError(response.ErrorMsg.Message)
+
+		case http.StatusTooManyRequests:
+			// TODO: rate error or bill error
+			return "", selfErr.NewTooManyReqError(response.ErrorMsg.Message)
+
+		default:
+			return "", nil
+		}
 	}
 }
 
 func (w *Whisper) generatingCommitMessage(req *http.Request) (*http.Response, error) {
+	// TODO: add timout handle
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: 100 * time.Second,
 	}
 
 	var res *http.Response
@@ -159,6 +184,9 @@ func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 				utils.WhisperPrinter.Error(
 					"Invalid API Key. Please check the relevant config.",
 				)
+			} else {
+				// TODO: add error handle
+				utils.WhisperPrinter.Error(err.Error())
 			}
 			return
 		}

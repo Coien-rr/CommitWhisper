@@ -99,10 +99,9 @@ func ReConfig() {
 			return
 		}
 		utils.WhisperPrinter.Info(fmt.Sprintf("The current config:\n%s", &config))
-		var newConfig Config
 		for {
-			newConfig = reconfigMenu(config)
-			if err := newConfig.checkConfig(); err != nil {
+			reconfigMenu(&config)
+			if err := config.checkConfig(); err != nil {
 				utils.WhisperPrinter.Error(err.Error())
 				utils.WhisperPrinter.Info("Please Config Whisper Again  ")
 			} else {
@@ -110,7 +109,7 @@ func ReConfig() {
 			}
 		}
 		// TODO: Set to goroutine
-		setEnvConfigToDotFile(newConfig)
+		setEnvConfigToDotFile(config)
 	} else {
 		utils.WhisperPrinter.Warning("The configuration file does not exist yet! ")
 		utils.WhisperPrinter.Info("Please start commitwhisper and follow the prompts to configure")
