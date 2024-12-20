@@ -34,7 +34,7 @@ func (p *Printer) Warning(msg string) {
 }
 
 func (p *Printer) Error(msg string) {
-	fmt.Println(p.errorTheme.Render(fmt.Sprintf("  %v", msg)))
+	fmt.Println(p.errorTheme.Render(fmt.Sprintf(" RuntimeError: %v", msg)))
 }
 
 func (p *Printer) WarningDisplayLists(msgTitle string, list []string) {

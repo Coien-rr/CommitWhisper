@@ -2,7 +2,6 @@ package whisper
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -95,6 +94,9 @@ func (w *Whisper) Run() {
 
 func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
 	req, err := w.llmModel.PrepareRequest(diffInfo)
+	if err != nil {
+		return "", fmt.Errorf("failed to prepare request: %v", err)
+	}
 	resp, err := w.generatingCommitMessage(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request: %v", err)
@@ -126,7 +128,8 @@ func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
 		}
 		switch resp.StatusCode {
 		case http.StatusUnauthorized:
-			return "", selfErr.ErrInvalidKey
+			// TODO: key Invalid  error
+			return "", selfErr.NewInvalidKeyError(response.ErrorMsg.Message)
 
 		case http.StatusNotFound:
 			// TODO: model not found error
@@ -180,14 +183,8 @@ func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 	for {
 		commitMsg, err := w.generateCommitMessage(diffInfo)
 		if err != nil {
-			if errors.Is(err, selfErr.ErrInvalidKey) {
-				utils.WhisperPrinter.Error(
-					"Invalid API Key. Please check the relevant config.",
-				)
-			} else {
-				// TODO: add error handle
-				utils.WhisperPrinter.Error(err.Error())
-			}
+			// TODO: add error handle
+			utils.WhisperPrinter.Error(err.Error())
 			return
 		}
 		utils.WhisperPrinter.Info("Commit Message Generated!")

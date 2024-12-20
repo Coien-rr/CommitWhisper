@@ -27,9 +27,16 @@ func isConfigFileExist() bool {
 }
 
 func (config *Config) String() string {
+	var isDoubao string
+	if config.AiProvider == "Doubao" {
+		isDoubao = "Endpoint"
+	} else {
+		isDoubao = "ModelName"
+	}
 	return fmt.Sprintf(
-		"Config{\n   AiProvider: %s,\n   ModelName: %s,\n   APIURL: %s,\n   APIKey: %s,\n}",
+		"Config{\n   AiProvider: %s,\n   %s: %s,\n   APIURL: %s,\n   APIKey: %s,\n}",
 		config.AiProvider,
+		isDoubao,
 		config.ModelName,
 		config.APIUrl,
 		config.APIKey,
@@ -70,7 +77,7 @@ func GetConfig() Config {
 	} else {
 		var config Config
 		for {
-			config = showMenu()
+			configMenu(&config)
 			if err := config.checkConfig(); err != nil {
 				utils.WhisperPrinter.Error(err.Error())
 				utils.WhisperPrinter.Info("Please Config Whisper Again  ")
@@ -100,7 +107,7 @@ func ReConfig() {
 		}
 		utils.WhisperPrinter.Info(fmt.Sprintf("The current config:\n%s", &config))
 		for {
-			reconfigMenu(&config)
+			configMenu(&config)
 			if err := config.checkConfig(); err != nil {
 				utils.WhisperPrinter.Error(err.Error())
 				utils.WhisperPrinter.Info("Please Config Whisper Again  ")

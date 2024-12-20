@@ -1,48 +1,26 @@
 package whisper
 
 import (
-	"time"
-
 	"github.com/Coien-rr/CommitWhisper/internal/models"
 	"github.com/charmbracelet/huh"
 )
 
-func showMenu() Config {
-	var aiProvider, modelName, apiKey string
-	var confirm bool
-	huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Value(&aiProvider).
-				Title("Choose Your AiProvider").
-				Height(5).
-				OptionsFunc(func() []huh.Option[string] {
-					return huh.NewOptions(models.AiProviderList...)
-				}, nil),
-			huh.NewSelect[string]().
-				Value(&modelName).
-				Height(8).
-				Title("Choose Your Model").
-				OptionsFunc(func() []huh.Option[string] {
-					s := models.ModelsList[aiProvider]
-					time.Sleep(500 * time.Millisecond)
-					return huh.NewOptions(s...)
-				}, &aiProvider),
-			huh.NewInput().Title("Enter Your API Key").Value(&apiKey),
-			huh.NewConfirm().Title("Confirm Config?").Value(&confirm),
-		),
-	).Run()
-	return Config{
-		AiProvider: aiProvider,
-		ModelName:  modelName,
-		APIUrl:     models.ModelsURLList[aiProvider],
-		APIKey:     apiKey,
-	}
-}
-
-func reconfigMenu(config *Config) {
+func configMenu(config *Config) {
 	// aiProvider, modelName, apiKey := config.AiProvider, config.ModelName, config.APIKey
 	var confirm bool
+	var endpoint string
+
+	if config.AiProvider == "Doubao" {
+		endpoint = config.ModelName
+	}
+
+	endpointInput := huh.NewInput().Title("Enter Your Endpoint").Value(&endpoint)
+
+	modelSelector := huh.NewSelect[string]().
+		Value(&config.ModelName).
+		Height(8).
+		Title("Choose Your Model")
+
 	huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
@@ -51,18 +29,35 @@ func reconfigMenu(config *Config) {
 				Height(5).OptionsFunc(func() []huh.Option[string] {
 				return huh.NewOptions(models.AiProviderList...)
 			}, nil),
-			huh.NewSelect[string]().
-				Value(&config.ModelName).
-				Height(8).
-				Title("Choose Your Model").
-				OptionsFunc(func() []huh.Option[string] {
-					s := models.ModelsList[config.AiProvider]
-					time.Sleep(500 * time.Millisecond)
-					return huh.NewOptions(s...)
-				}, &config.AiProvider),
+		),
+
+		huh.NewGroup(
+			modelSelector,
+		).WithHideFunc(func() bool {
+			if config.AiProvider == "Doubao" {
+				return true
+			} else {
+				modelOptions := huh.NewOptions(models.ModelsList[config.AiProvider]...)
+				modelSelector.Options(modelOptions...)
+				return false
+			}
+		}),
+
+		huh.NewGroup(
+			endpointInput,
+		).WithHideFunc(func() bool {
+			return config.AiProvider != "Doubao"
+		}),
+
+		huh.NewGroup(
 			huh.NewInput().Title("Enter Your API Key").Value(&config.APIKey),
 			huh.NewConfirm().Title("Confirm Config?").Value(&confirm),
 		),
 	).Run()
+
+	if config.AiProvider == "Doubao" {
+		config.ModelName = endpoint
+	}
+	config.APIUrl = models.ModelsURLList[config.AiProvider]
 	// TODO: add config check
 }
