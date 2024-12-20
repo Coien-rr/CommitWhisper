@@ -15,7 +15,6 @@ type Config struct {
 	ModelName  string `yaml:"ModelName"`
 	APIUrl     string `yaml:"APIUrl"`
 	APIKey     string `yaml:"APIKey"`
-	Endpoint   string `yaml:"Endpoint"`
 }
 
 const configFileName = ".commitwhisper"

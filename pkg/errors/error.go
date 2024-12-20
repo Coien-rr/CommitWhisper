@@ -1,9 +1,17 @@
 package errors
 
-type InvalidKeyError struct{}
+type InvalidKeyError struct {
+	msg string
+}
+
+func NewInvalidKeyError(errMsg string) *InvalidKeyError {
+	return &InvalidKeyError{
+		msg: removeRequestID(errMsg),
+	}
+}
 
 func (e *InvalidKeyError) Error() string {
-	return "ERROR: InvalidAPIKey"
+	return e.msg
 }
 
 func (e *InvalidKeyError) Is(target error) bool {
@@ -38,7 +46,7 @@ type NotFoundError struct {
 
 func NewNotFoundError(errMsg string) *NotFoundError {
 	return &NotFoundError{
-		msg: errMsg,
+		msg: removeRequestID(errMsg),
 	}
 }
 
