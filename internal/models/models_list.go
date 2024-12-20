@@ -29,13 +29,7 @@ var ModelsList = map[string][]string{
 		"qwen2.5-coder-1.5b-instruct",
 		"qwen2.5-coder-0.5b-instruct",
 	},
-	"Doubao": {
-		"Doubao-lite-4k",
-		"Doubao-lite-32k",
-		"Doubao-pro-4k",
-		"Doubao-pro-32k",
-		"Doubao-pro-128k",
-	},
+	"Doubao": {},
 	"Skylark": {
 		"Skylark2-pro-character-4k",
 		"Skylark2-pro-32k",
@@ -44,7 +38,6 @@ var ModelsList = map[string][]string{
 		"Skylark2-lite-8k",
 	},
 
-	// TODO: OpenAI
 	// TODO: Claude
 	// TODO: Gemini
 }
@@ -52,6 +45,6 @@ var ModelsList = map[string][]string{
 var ModelsURLList = map[string]string{
 	"Qwen":    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
 	"OpenAI":  "https://api.openai.com/v1/chat/completions",
-	"Doubao":  "doubao TODO",
+	"Doubao":  "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
 	"Skylark": "doubao TODO",
 }

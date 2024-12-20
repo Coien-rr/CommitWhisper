@@ -15,6 +15,7 @@ type Config struct {
 	ModelName  string `yaml:"ModelName"`
 	APIUrl     string `yaml:"APIUrl"`
 	APIKey     string `yaml:"APIKey"`
+	Endpoint   string `yaml:"Endpoint"`
 }
 
 const configFileName = ".commitwhisper"
@@ -27,9 +28,16 @@ func isConfigFileExist() bool {
 }
 
 func (config *Config) String() string {
+	var isDoubao string
+	if config.AiProvider == "Doubao" {
+		isDoubao = "Endpoint"
+	} else {
+		isDoubao = "ModelName"
+	}
 	return fmt.Sprintf(
-		"Config{\n   AiProvider: %s,\n   ModelName: %s,\n   APIURL: %s,\n   APIKey: %s,\n}",
+		"Config{\n   AiProvider: %s,\n   %s: %s,\n   APIURL: %s,\n   APIKey: %s,\n}",
 		config.AiProvider,
+		isDoubao,
 		config.ModelName,
 		config.APIUrl,
 		config.APIKey,
