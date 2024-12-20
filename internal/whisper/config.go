@@ -78,7 +78,7 @@ func GetConfig() Config {
 	} else {
 		var config Config
 		for {
-			config = showMenu()
+			configMenu(&config)
 			if err := config.checkConfig(); err != nil {
 				utils.WhisperPrinter.Error(err.Error())
 				utils.WhisperPrinter.Info("Please Config Whisper Again  ")
@@ -108,7 +108,7 @@ func ReConfig() {
 		}
 		utils.WhisperPrinter.Info(fmt.Sprintf("The current config:\n%s", &config))
 		for {
-			reconfigMenu(&config)
+			configMenu(&config)
 			if err := config.checkConfig(); err != nil {
 				utils.WhisperPrinter.Error(err.Error())
 				utils.WhisperPrinter.Info("Please Config Whisper Again  ")
