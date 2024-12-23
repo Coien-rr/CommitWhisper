@@ -46,6 +46,7 @@ _Whisper From `LLMs` For Your `Commit` Msg_
 
 ```sh
 go install github.com/Coien-rr/CommitWhisper@latest
+ln -s $(go env GOPATH)/bin/CommitWhisper $(go env GOPATH)/bin/cw
 cw # Using Commit Whisper in Git-Repo
 ```
 
