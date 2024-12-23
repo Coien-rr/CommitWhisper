@@ -62,7 +62,7 @@ cw # Using Commit Whisper in Git-Repo
 
 ## ⚙️ Configuration
 
-*Cofig File Locates `~/.commitwhisper`_
+**Cofig File Locates** _`~/.commitwhisper`_
 
 When you first start `cw`, it will prompt you interactively to select configurations, including
 
@@ -84,7 +84,7 @@ APIKey: [Please Put Your API Key Here]
 
 ## :crystal_ball: RoadMap
 
-*💡 Ideas to explore_
+_💡 Ideas to explore_
 
 - [ ] Support More AiProvider, Such as OpenAI✅, Claude💤, etc.(_In Process_)
 - [ ] Generate more detailed commit descriptions(multi-lines commit).
