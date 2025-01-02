@@ -7,6 +7,7 @@ import (
 
 type Model interface {
 	PrepareRequest(diffInfo string) (*http.Request, error)
+	CreateContextSession() (string, error)
 }
 
 type RequestBody struct {
@@ -31,10 +32,10 @@ func prepareQuestionContent(diffInfo string) string {
 
 func CreateModel(aiProvider, modelName, url, key string) (Model, error) {
 	switch aiProvider {
-	case "Qwen":
-		return &QWENModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
-	case "OpenAI":
-		return &OpenAIModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
+	// case "Qwen":
+	// 	return &QWENModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
+	// case "OpenAI":
+	// 	return &OpenAIModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
 	case "Doubao":
 		return &DoubaoModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
 	default:

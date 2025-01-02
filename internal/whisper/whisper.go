@@ -85,10 +85,25 @@ func (w *Whisper) checkIsGitRepo() bool {
 	return true
 }
 
+func (w *Whisper) isUsePromptRefine() bool {
+	return true
+}
+
 func (w *Whisper) Run() {
 	w.greet()
 	if w.checkIsGitRepo() {
-		w.generateAICommitByGitDiff()
+		if w.isUsePromptRefine() {
+			// TODO: 1. create context session
+			id, err := w.llmModel.CreateContextSession()
+			if err != nil {
+				utils.WhisperPrinter.Error(err.Error())
+				return
+			}
+			utils.WhisperPrinter.Info(id)
+			// TODO: 2. generateRefinedCommitMsg()
+		} else {
+			w.generateAICommitByGitDiff()
+		}
 	}
 }
 
