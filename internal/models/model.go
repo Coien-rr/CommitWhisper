@@ -8,6 +8,7 @@ import (
 type Model interface {
 	PrepareRequest(diffInfo string) (*http.Request, error)
 	CreateContextSession() (string, error)
+	CreateSessionChatRequest(diffInfo string) (*http.Request, error)
 }
 
 type RequestBody struct {
@@ -26,10 +27,6 @@ type BaseModel struct {
 	key       string
 }
 
-func prepareQuestionContent(diffInfo string) string {
-	return "Please write a commit message for these git changes, " + diffInfo
-}
-
 func CreateModel(aiProvider, modelName, url, key string) (Model, error) {
 	switch aiProvider {
 	// case "Qwen":
@@ -37,7 +34,11 @@ func CreateModel(aiProvider, modelName, url, key string) (Model, error) {
 	// case "OpenAI":
 	// 	return &OpenAIModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
 	case "Doubao":
-		return &DoubaoModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
+		return &DoubaoModel{
+			BaseModel: BaseModel{modelName: modelName, url: url, key: key},
+			ContextID: "",
+			chatCount: 0,
+		}, nil
 	default:
 		return nil, fmt.Errorf(
 			"CreateModelError: %v is unsupported yet, Coming Soon  ",

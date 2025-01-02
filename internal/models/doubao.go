@@ -14,14 +14,25 @@ const ARK_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
 
 type DoubaoModel struct {
 	BaseModel
+	ContextID string
+	chatCount int
 }
 
-type DoubaoSessionReqBody struct {
+// TODO: refactor base model
+type doubaoSessionReqBody struct {
 	Model    string    `json:"model"`
-	Mode     string    `json:"mode"`
 	Messages []Message `json:"messages"`
-	TTL      int       `json:"ttl"`
-	// TruncationStrategy truncationStrategy `json:"truncation_strategy"`
+}
+
+type DoubaoCreateSessionReqBody struct {
+	Mode string `json:"mode"`
+	doubaoSessionReqBody
+	TTL int `json:"ttl"`
+}
+
+type DoubaoSessionChatReqBody struct {
+	ContextID string `json:"context_id"`
+	doubaoSessionReqBody
 }
 
 type truncationStrategy struct {
@@ -57,6 +68,10 @@ type SessionError struct {
 	} `json:"error"`
 }
 
+func (m *DoubaoModel) setContextID(cxtID string) {
+	m.ContextID = cxtID
+}
+
 func (m *DoubaoModel) prepareRequestBody(diffInfo string) RequestBody {
 	return RequestBody{
 		Model: m.modelName,
@@ -67,14 +82,35 @@ func (m *DoubaoModel) prepareRequestBody(diffInfo string) RequestBody {
 	}
 }
 
-func (m *DoubaoModel) prepareSessionCreateReqBody() DoubaoSessionReqBody {
-	return DoubaoSessionReqBody{
-		Model: m.modelName,
-		Messages: []Message{
-			{Role: "system", Content: GetSystemPrompt()},
+func (m *DoubaoModel) prepareSessionCreateReqBody() DoubaoCreateSessionReqBody {
+	return DoubaoCreateSessionReqBody{
+		doubaoSessionReqBody: doubaoSessionReqBody{
+			Model: m.modelName,
+			Messages: []Message{
+				{Role: "system", Content: GetSystemPrompt()},
+			},
 		},
 		Mode: "session",
 		TTL:  3600,
+	}
+}
+
+func (m *DoubaoModel) prepareSessionChatReqBody(diffInfo string) DoubaoSessionChatReqBody {
+	var prompt string
+	if m.chatCount == 0 {
+		prompt = getCommitGeneratePrompt(diffInfo)
+	} else {
+		prompt = getRefinePrompt(diffInfo)
+	}
+	m.chatCount++
+	return DoubaoSessionChatReqBody{
+		ContextID: m.ContextID,
+		doubaoSessionReqBody: doubaoSessionReqBody{
+			Model: m.modelName,
+			Messages: []Message{
+				{Role: "user", Content: prompt},
+			},
+		},
 	}
 }
 
@@ -89,6 +125,29 @@ func (m *DoubaoModel) createSessionRequest() (*http.Request, error) {
 	req, err := http.NewRequest(
 		http.MethodPost,
 		ARK_BASE_URL+"/context/create",
+		bytes.NewBuffer(requestBodyBytes),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+m.key)
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+func (m *DoubaoModel) CreateSessionChatRequest(diffInfo string) (*http.Request, error) {
+	reqBody := m.prepareSessionChatReqBody(diffInfo)
+
+	requestBodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		log.Fatal("Failed to marshal request body:", err)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		ARK_BASE_URL+"/context/chat/completions",
 		bytes.NewBuffer(requestBodyBytes),
 	)
 	if err != nil {
@@ -171,6 +230,8 @@ func (m *DoubaoModel) CreateContextSession() (string, error) {
 	}
 
 	sessionID, err := m.handleSessionCreateResponse(req)
+
+	m.setContextID(sessionID)
 
 	return sessionID, err
 }

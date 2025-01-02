@@ -14,6 +14,7 @@ const (
 	oneLineCommitInstruction = "Craft a concise commit message that encapsulates all changes made, with an emphasis on the primary updates. If the modifications share a common theme or scope, mention it succinctly; otherwise, leave the scope out to maintain focus. The goal is to provide a clear and unified overview of the changes in a one single message, without diverging into a list of commit per file change, Please note that the number of characters of generated commit message does not exceed 60!!!"
 	descriptionInstruction   = "Add a short description of WHY the changes are done after the commit message. Don't start it with \"This commit\", just describe the changes."
 	noDescriptionInstruction = "Don't add any descriptions to the commit, only one line contains commit message."
+	refinePromptInstruction  = "Please regenerate the commit information according to the previous system settings and the following modification suggestions: "
 )
 
 func GetSystemPrompt() string {
@@ -26,4 +27,16 @@ func getOneLineCommitInstruction() string {
 
 func getDescriptionInstruction() string {
 	return descriptionInstruction
+}
+
+func prepareQuestionContent(diffInfo string) string {
+	return "Please write a commit message for these git changes, " + diffInfo
+}
+
+func getCommitGeneratePrompt(diffInfo string) string {
+	return "Please write a commit message for these git changes, " + diffInfo
+}
+
+func getRefinePrompt(refineMsg string) string {
+	return refinePromptInstruction + refineMsg
 }

@@ -94,13 +94,8 @@ func (w *Whisper) Run() {
 	if w.checkIsGitRepo() {
 		if w.isUsePromptRefine() {
 			// TODO: 1. create context session
-			id, err := w.llmModel.CreateContextSession()
-			if err != nil {
-				utils.WhisperPrinter.Error(err.Error())
-				return
-			}
-			utils.WhisperPrinter.Info(id)
 			// TODO: 2. generateRefinedCommitMsg()
+			w.createCommitGeneratorBySession()
 		} else {
 			w.generateAICommitByGitDiff()
 		}
@@ -108,7 +103,8 @@ func (w *Whisper) Run() {
 }
 
 func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
-	req, err := w.llmModel.PrepareRequest(diffInfo)
+	// req, err := w.llmModel.PrepareRequest(diffInfo)
+	req, err := w.llmModel.CreateSessionChatRequest(diffInfo)
 	if err != nil {
 		return "", fmt.Errorf("failed to prepare request: %v", err)
 	}
@@ -194,9 +190,22 @@ func (w *Whisper) conformGeneratedMessage(generatedCommitMsg string) bool {
 	return confirm
 }
 
+func (w *Whisper) refineGeneratedMessage() string {
+	var refinePrompt string
+
+	huh.NewInput().
+		Title("Input Your Prompt For Refine").
+		Prompt("💡").
+		// Validate(isFood).
+		Value(&refinePrompt).Run()
+
+	return refinePrompt
+}
+
 func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
+	refinePrompt := diffInfo
 	for {
-		commitMsg, err := w.generateCommitMessage(diffInfo)
+		commitMsg, err := w.generateCommitMessage(refinePrompt)
 		if err != nil {
 			// TODO: add error handle
 			utils.WhisperPrinter.Error(err.Error())
@@ -210,7 +219,8 @@ func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 			utils.WhisperPrinter.Info("Copied Commit Message into ClipBoard ✔")
 			return
 		case false:
-			utils.WhisperPrinter.Warning("Not Good Enough, Retry!")
+			refinePrompt = w.refineGeneratedMessage()
+			// utils.WhisperPrinter.Info(refinePrompt)
 			continue
 		}
 	}
@@ -225,5 +235,24 @@ func (w *Whisper) generateAICommitByGitDiff() {
 		utils.WhisperPrinter.Info("Working tree clean,Nothing to commit ")
 		return
 	}
+	w.handleGeneratedCommitMsg(diff)
+}
+
+func (w *Whisper) createCommitGeneratorBySession() {
+	diff, err := git.GetGitDiff()
+	if err != nil {
+		utils.WhisperPrinter.Error(err.Error())
+		return
+	} else if diff == "" {
+		utils.WhisperPrinter.Info("Working tree clean,Nothing to commit ")
+		return
+	}
+
+	_, err = w.llmModel.CreateContextSession()
+	if err != nil {
+		utils.WhisperPrinter.Error(err.Error())
+		return
+	}
+
 	w.handleGeneratedCommitMsg(diff)
 }
