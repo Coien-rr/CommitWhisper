@@ -11,6 +11,7 @@ import (
 
 type Whisper struct {
 	llmModel models.Model
+	config   Config
 }
 
 type ResponseBody struct {
@@ -49,14 +50,7 @@ func NewWhisper(config Config) *Whisper {
 		return nil
 	}
 
-	if engine, err := models.CreateModel(config.AiProvider, config.ModelName, config.APIUrl, config.APIKey); err == nil {
-		return &Whisper{
-			llmModel: engine,
-		}
-	} else {
-		utils.WhisperPrinter.Warning(err.Error())
-		return nil
-	}
+	return &Whisper{config: config}
 }
 
 func (w *Whisper) greet() {
@@ -78,13 +72,28 @@ func (w *Whisper) isUsePromptRefine() bool {
 
 func (w *Whisper) Run() {
 	w.greet()
+
 	if w.checkIsGitRepo() {
-		if w.isUsePromptRefine() {
-			// TODO: 1. create context session
-			// TODO: 2. generateRefinedCommitMsg()
-			w.createCommitGeneratorBySession()
+		if diff, isVaild := w.inspectGitChanges(); isVaild {
+			if engine,
+				err := models.CreateModel(
+				w.config.AiProvider,
+				w.config.ModelName,
+				w.config.APIUrl,
+				w.config.APIKey,
+			); err == nil {
+				w.llmModel = engine
+			} else {
+				utils.WhisperPrinter.Warning(err.Error())
+				return
+			}
+			if w.isUsePromptRefine() {
+				w.createCommitGeneratorBySession(diff)
+			} else {
+				w.generateAICommitByGitDiff(diff)
+			}
 		} else {
-			w.generateAICommitByGitDiff()
+			return
 		}
 	}
 }
@@ -158,27 +167,22 @@ func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 	}
 }
 
-// TODO: refactor
-func (w *Whisper) generateAICommitByGitDiff() {
-	diff, err := git.GetGitDiff()
-	if err != nil {
-		utils.WhisperPrinter.Error(err.Error())
-		return
-	} else if diff == "" {
-		utils.WhisperPrinter.Info("Working tree clean,Nothing to commit ")
-		return
-	}
+func (w *Whisper) generateAICommitByGitDiff(diff string) {
 	w.handleGeneratedCommitMsg(diff)
 }
 
-func (w *Whisper) createCommitGeneratorBySession() {
+func (w *Whisper) createCommitGeneratorBySession(diff string) {
+	w.handleGeneratedCommitMsg(diff)
+}
+
+func (w *Whisper) inspectGitChanges() (string, bool) {
 	diff, err := git.GetGitDiff()
 	if err != nil {
 		utils.WhisperPrinter.Error(err.Error())
-		return
+		return "", false
 	} else if diff == "" {
 		utils.WhisperPrinter.Info("Working tree clean,Nothing to commit ")
-		return
+		return "", false
 	}
-	w.handleGeneratedCommitMsg(diff)
+	return diff, true
 }
