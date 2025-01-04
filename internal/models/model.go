@@ -9,6 +9,7 @@ type Model interface {
 	PrepareRequest(diffInfo string) (*http.Request, error)
 	CreateContextSession() (string, error)
 	CreateSessionChatRequest(diffInfo string) (*http.Request, error)
+	GenerateCommitMessage(diffInfo string) (string, error)
 }
 
 type RequestBody struct {

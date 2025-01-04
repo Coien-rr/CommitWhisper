@@ -1,15 +1,8 @@
 package whisper
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"time"
-
 	"github.com/Coien-rr/CommitWhisper/internal/git"
 	"github.com/Coien-rr/CommitWhisper/internal/models"
-	selfErr "github.com/Coien-rr/CommitWhisper/pkg/errors"
 	"github.com/Coien-rr/CommitWhisper/pkg/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
@@ -103,70 +96,15 @@ func (w *Whisper) Run() {
 }
 
 func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
-	// req, err := w.llmModel.PrepareRequest(diffInfo)
-	req, err := w.llmModel.CreateSessionChatRequest(diffInfo)
-	if err != nil {
-		return "", fmt.Errorf("failed to prepare request: %v", err)
-	}
-	resp, err := w.generatingCommitMessage(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to send request: %v", err)
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("ERROR(generateCommitMessage): failed to read response body: %v", err)
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		var response ResponseBody
-		if err := json.Unmarshal(body, &response); err != nil {
-			return "", fmt.Errorf(
-				"ERROR(generateCommitMessage): failed to parse response JSON: %v",
-				err,
-			)
-		}
-		return response.Choices[0].Message.Content, nil
-	} else {
-		var response errResponseBody
-		if err := json.Unmarshal(body, &response); err != nil {
-			return "", fmt.Errorf(
-				"ERROR(generateCommitMessage): failed to parse response JSON: %v",
-				err,
-			)
-		}
-		switch resp.StatusCode {
-		case http.StatusUnauthorized:
-			// TODO: key Invalid  error
-			return "", selfErr.NewInvalidKeyError(response.ErrorMsg.Message)
-
-		case http.StatusNotFound:
-			// TODO: model not found error
-			return "", selfErr.NewNotFoundError(response.ErrorMsg.Message)
-
-		case http.StatusTooManyRequests:
-			// TODO: rate error or bill error
-			return "", selfErr.NewTooManyReqError(response.ErrorMsg.Message)
-
-		default:
-			return "", nil
-		}
-	}
+	return w.generatingCommitMessage(diffInfo)
 }
 
-func (w *Whisper) generatingCommitMessage(req *http.Request) (*http.Response, error) {
-	// TODO: add timout handle
-	client := &http.Client{
-		Timeout: 100 * time.Second,
-	}
-
-	var res *http.Response
+func (w *Whisper) generatingCommitMessage(prompt string) (string, error) {
+	var commitMsg string
 	var err error
 
 	action := func() {
-		res, err = client.Do(req)
+		commitMsg, err = w.llmModel.GenerateCommitMessage(prompt)
 	}
 	_ = spinner.New().
 		Title("Generating Commit Message󰒲 ").
@@ -174,7 +112,7 @@ func (w *Whisper) generatingCommitMessage(req *http.Request) (*http.Response, er
 		Action(action).
 		Run()
 
-	return res, err
+	return commitMsg, err
 }
 
 func (w *Whisper) conformGeneratedMessage(generatedCommitMsg string) bool {
@@ -184,7 +122,7 @@ func (w *Whisper) conformGeneratedMessage(generatedCommitMsg string) bool {
 		Title("Confirm the commit message?").
 		Description(generatedCommitMsg).
 		Affirmative("Confirm!").
-		Negative("Retry!").
+		Negative("Refine!").
 		Value(&confirm).Run()
 
 	return confirm
