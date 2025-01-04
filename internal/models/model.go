@@ -7,7 +7,6 @@ import (
 
 type Model interface {
 	PrepareRequest(diffInfo string) (*http.Request, error)
-	CreateContextSession() (string, error)
 	CreateSessionChatRequest(diffInfo string) (*http.Request, error)
 	GenerateCommitMessage(diffInfo string) (string, error)
 }
@@ -35,11 +34,14 @@ func CreateModel(aiProvider, modelName, url, key string) (Model, error) {
 	// case "OpenAI":
 	// 	return &OpenAIModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
 	case "Doubao":
-		return &DoubaoModel{
-			BaseModel: BaseModel{modelName: modelName, url: url, key: key},
-			ContextID: "",
-			chatCount: 0,
-		}, nil
+		modelAgent, err := NewDoubaoModel(modelName, url, key)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"CreateModelError: Create %v Model Failed For %w",
+				aiProvider, err,
+			)
+		}
+		return modelAgent, nil
 	default:
 		return nil, fmt.Errorf(
 			"CreateModelError: %v is unsupported yet, Coming Soon  ",

@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/Coien-rr/CommitWhisper/internal/comm"
 	selfErr "github.com/Coien-rr/CommitWhisper/pkg/errors"
@@ -17,9 +15,8 @@ const ARK_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
 
 type DoubaoModel struct {
 	BaseModel
-	ContextID string
-	chatCount int
-	isPrompt  bool
+	contextID     string
+	isRefineStage bool
 }
 
 // TODO: refactor base model
@@ -101,12 +98,51 @@ type errorMsg struct {
 	Code    string `json:"code"`
 }
 
-func (m *DoubaoModel) setContextID(cxtID string) {
-	m.ContextID = cxtID
+func NewDoubaoModel(modelName, baseUrl, apiKey string) (*DoubaoModel, error) {
+	model := &DoubaoModel{
+		BaseModel:     BaseModel{modelName: modelName, url: baseUrl, key: apiKey},
+		isRefineStage: false,
+	}
+
+	err := model.initContextSession()
+
+	return model, err
 }
 
-// func (m *DoubaoModel) initContextSession() error {
-// }
+func (m *DoubaoModel) setContextID(cxtID string) {
+	m.contextID = cxtID
+}
+
+func (m *DoubaoModel) setRefineStage() {
+	m.isRefineStage = true
+}
+
+func (m *DoubaoModel) initContextSession() error {
+	client := comm.NewLLMsServiceClient(m.key, m.url)
+
+	// TODO: refactor
+	requestBodyBytes, err := json.Marshal(m.prepareSessionCreateReqBody())
+	if err != nil {
+		return fmt.Errorf(
+			"ERROR(initContextSession): Failed to marshal request body: %w",
+			err,
+		)
+	}
+
+	resp, statusCode, err := client.CreateLLMsContextSession(requestBodyBytes)
+
+	contextID, err := m.handleSessionCreateResponse(resp, statusCode)
+	if err != nil {
+		return fmt.Errorf(
+			"ERROR(initContextSession): %w",
+			err,
+		)
+	}
+
+	m.setContextID(contextID)
+
+	return nil
+}
 
 func (m *DoubaoModel) prepareRequestBody(diffInfo string) RequestBody {
 	return RequestBody{
@@ -133,14 +169,15 @@ func (m *DoubaoModel) prepareSessionCreateReqBody() DoubaoCreateSessionReqBody {
 
 func (m *DoubaoModel) prepareSessionChatReqBody(diffInfo string) DoubaoSessionChatReqBody {
 	var prompt string
-	if m.chatCount == 0 {
+	if !m.isRefineStage {
 		prompt = getCommitGeneratePrompt(diffInfo)
+		m.setRefineStage()
 	} else {
 		prompt = getRefinePrompt(diffInfo)
 	}
-	m.chatCount++
+
 	return DoubaoSessionChatReqBody{
-		ContextID: m.ContextID,
+		ContextID: m.contextID,
 		doubaoSessionReqBody: doubaoSessionReqBody{
 			Model: m.modelName,
 			Messages: []Message{
@@ -196,49 +233,7 @@ func (m *DoubaoModel) CreateSessionChatRequest(diffInfo string) (*http.Request, 
 	return req, nil
 }
 
-func (m *DoubaoModel) handleSessionCreateResponse(req *http.Request) (string, error) {
-	client := &http.Client{
-		Timeout: 100 * time.Second,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("ERROR(handleSessionCreateResponse): Failed to send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf(
-			"ERROR(handleSessionCreateResponse): Failed to read response body: %w",
-			err,
-		)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		var respErr SessionError
-		err = json.Unmarshal(body, &respErr)
-		if err != nil {
-			return "", fmt.Errorf(
-				"ERROR(handleSessionCreateResponse): Failed to unmarshal response: %w",
-				err,
-			)
-		}
-		return "", fmt.Errorf(respErr.Error.Message)
-	} else {
-		var respSession SessionResp
-		err = json.Unmarshal(body, &respSession)
-		if err != nil {
-			return "", fmt.Errorf(
-				"ERROR(handleSessionCreateResponse): Failed to unmarshal response: %w",
-				err,
-			)
-		}
-		return respSession.ID, nil
-	}
-}
-
-func (m *DoubaoModel) handleSessionCreateResponse_new(
+func (m *DoubaoModel) handleSessionCreateResponse(
 	respBody []byte,
 	statusCode int,
 ) (string, error) {
@@ -278,44 +273,8 @@ func (m *DoubaoModel) PrepareRequest(diffInfo string) (*http.Request, error) {
 	return comm.CreateLLMsRequest(reqBytes, m.key, m.url)
 }
 
-func (m *DoubaoModel) CreateContextSession() (string, error) {
-	req, err := m.createSessionRequest()
-	if err != nil {
-		return "", err
-	}
-
-	sessionID, err := m.handleSessionCreateResponse(req)
-
-	m.setContextID(sessionID)
-
-	return sessionID, err
-}
-
 func (m *DoubaoModel) GenerateCommitMessage(diffInfo string) (string, error) {
 	client := comm.NewLLMsServiceClient(m.key, ARK_BASE_URL)
-
-	if m.ContextID == "" {
-		// TODO: refactor
-		requestBodyBytes, err := json.Marshal(m.prepareSessionCreateReqBody())
-		if err != nil {
-			return "", fmt.Errorf(
-				"ERROR(GenerateCommitMessage): Failed to marshal request body: %w",
-				err,
-			)
-		}
-
-		resp, statusCode, err := client.CreateLLMsContextSession(requestBodyBytes)
-
-		contextID, err := m.handleSessionCreateResponse_new(resp, statusCode)
-		if err != nil {
-			return "", fmt.Errorf(
-				"ERROR(GenerateCommitMessage): %w",
-				err,
-			)
-		}
-
-		m.setContextID(contextID)
-	}
 
 	requestBody, err := json.Marshal(m.prepareSessionChatReqBody(diffInfo))
 	if err != nil {
@@ -367,21 +326,4 @@ func (m *DoubaoModel) GenerateCommitMessage(diffInfo string) (string, error) {
 			return "", nil
 		}
 	}
-
-	// req, err := w.llmModel.CreateSessionChatRequest(diffInfo)
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to prepare request: %v", err)
-	// }
-	// resp, err := w.generatingCommitMessage(req)
-	// if err != nil {
-	// 	return "", fmt.Errorf("failed to send request: %v", err)
-	// }
-	//
-	// defer resp.Body.Close()
-	//
-	// body, err := io.ReadAll(resp.Body)
-	// if err != nil {
-	// 	return "", fmt.Errorf("ERROR(generateCommitMessage): failed to read response body: %v", err)
-	// }
-	//
 }

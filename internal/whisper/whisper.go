@@ -15,12 +15,6 @@ type Whisper struct {
 
 type ResponseBody struct {
 	Choices []Choices `json:"choices"`
-	// Choices []struct {
-	// 	Message struct {
-	// 		Role    string `json:"role"`
-	// 		Content string `json:"content"`
-	// 	} `json:"message"`
-	// } `json:"choices"`
 }
 
 type Choices struct {
@@ -164,6 +158,7 @@ func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 	}
 }
 
+// TODO: refactor
 func (w *Whisper) generateAICommitByGitDiff() {
 	diff, err := git.GetGitDiff()
 	if err != nil {
@@ -185,12 +180,5 @@ func (w *Whisper) createCommitGeneratorBySession() {
 		utils.WhisperPrinter.Info("Working tree clean,Nothing to commit ")
 		return
 	}
-
-	_, err = w.llmModel.CreateContextSession()
-	if err != nil {
-		utils.WhisperPrinter.Error(err.Error())
-		return
-	}
-
 	w.handleGeneratedCommitMsg(diff)
 }
