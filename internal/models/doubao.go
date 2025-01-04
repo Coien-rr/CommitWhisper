@@ -161,7 +161,7 @@ func (m *DoubaoModel) prepareSessionChatReqBody(diffInfo string) DoubaoSessionCh
 		prompt = getCommitGeneratePrompt(diffInfo)
 		m.setRefineStage()
 	} else {
-		prompt = getRefinePrompt(diffInfo)
+		prompt = getCommitRefinePrompt(diffInfo)
 	}
 
 	return DoubaoSessionChatReqBody{

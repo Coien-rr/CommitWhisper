@@ -16,7 +16,7 @@ func (m *QWENModel) prepareRequestBody(diffInfo string) RequestBody {
 		Model: m.modelName,
 		Messages: []Message{
 			{Role: "system", Content: GetSystemPrompt()},
-			{Role: "user", Content: prepareQuestionContent(diffInfo)},
+			{Role: "user", Content: getCommitGeneratePrompt(diffInfo)},
 		},
 	}
 }
