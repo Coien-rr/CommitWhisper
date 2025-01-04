@@ -1,10 +1,8 @@
 package models
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/Coien-rr/CommitWhisper/internal/comm"
@@ -144,16 +142,6 @@ func (m *DoubaoModel) initContextSession() error {
 	return nil
 }
 
-func (m *DoubaoModel) prepareRequestBody(diffInfo string) RequestBody {
-	return RequestBody{
-		Model: m.modelName,
-		Messages: []Message{
-			{Role: "system", Content: GetSystemPrompt()},
-			{Role: "user", Content: prepareQuestionContent(diffInfo)},
-		},
-	}
-}
-
 func (m *DoubaoModel) prepareSessionCreateReqBody() DoubaoCreateSessionReqBody {
 	return DoubaoCreateSessionReqBody{
 		doubaoSessionReqBody: doubaoSessionReqBody{
@@ -187,52 +175,6 @@ func (m *DoubaoModel) prepareSessionChatReqBody(diffInfo string) DoubaoSessionCh
 	}
 }
 
-func (m *DoubaoModel) createSessionRequest() (*http.Request, error) {
-	reqBody := m.prepareSessionCreateReqBody()
-
-	requestBodyBytes, err := json.Marshal(reqBody)
-	if err != nil {
-		log.Fatal("Failed to marshal request body:", err)
-	}
-
-	req, err := http.NewRequest(
-		http.MethodPost,
-		ARK_BASE_URL+"/context/create",
-		bytes.NewBuffer(requestBodyBytes),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+m.key)
-	req.Header.Set("Content-Type", "application/json")
-
-	return req, nil
-}
-
-func (m *DoubaoModel) CreateSessionChatRequest(diffInfo string) (*http.Request, error) {
-	reqBody := m.prepareSessionChatReqBody(diffInfo)
-
-	requestBodyBytes, err := json.Marshal(reqBody)
-	if err != nil {
-		log.Fatal("Failed to marshal request body:", err)
-	}
-
-	req, err := http.NewRequest(
-		http.MethodPost,
-		ARK_BASE_URL+"/context/chat/completions",
-		bytes.NewBuffer(requestBodyBytes),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+m.key)
-	req.Header.Set("Content-Type", "application/json")
-
-	return req, nil
-}
-
 func (m *DoubaoModel) handleSessionCreateResponse(
 	respBody []byte,
 	statusCode int,
@@ -261,17 +203,6 @@ func (m *DoubaoModel) handleSessionCreateResponse(
 }
 
 // TODO: refactor Doubao LLMs communication with volcano SDK
-
-func (m *DoubaoModel) PrepareRequest(diffInfo string) (*http.Request, error) {
-	reqBody := m.prepareRequestBody(diffInfo)
-
-	reqBytes, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode request body: %v", err)
-	}
-
-	return comm.CreateLLMsRequest(reqBytes, m.key, m.url)
-}
 
 func (m *DoubaoModel) GenerateCommitMessage(diffInfo string) (string, error) {
 	client := comm.NewLLMsServiceClient(m.key, ARK_BASE_URL)

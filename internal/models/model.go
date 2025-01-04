@@ -2,12 +2,9 @@ package models
 
 import (
 	"fmt"
-	"net/http"
 )
 
 type Model interface {
-	PrepareRequest(diffInfo string) (*http.Request, error)
-	CreateSessionChatRequest(diffInfo string) (*http.Request, error)
 	GenerateCommitMessage(diffInfo string) (string, error)
 }
 
