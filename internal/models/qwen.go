@@ -3,11 +3,8 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 
 	"github.com/Coien-rr/CommitWhisper/internal/comm"
-
-	selfErr "github.com/Coien-rr/CommitWhisper/pkg/errors"
 )
 
 type QwenModel struct {
@@ -69,38 +66,5 @@ func (m *QwenModel) GenerateCommitMessage(diffInfo string) (string, error) {
 		)
 	}
 
-	if statusCode == http.StatusOK {
-		var response ResponseBody
-		if err := json.Unmarshal(resp, &response); err != nil {
-			return "", fmt.Errorf(
-				"ERROR(generateCommitMessage): failed to parse response JSON: %v",
-				err,
-			)
-		}
-		return response.Choices[0].Message.Content, nil
-	} else {
-		var response errResponseBody
-		if err := json.Unmarshal(resp, &response); err != nil {
-			return "", fmt.Errorf(
-				"ERROR(generateCommitMessage): failed to parse response JSON: %v",
-				err,
-			)
-		}
-		switch statusCode {
-		case http.StatusUnauthorized:
-			// TODO: key Invalid  error
-			return "", selfErr.NewInvalidKeyError(response.ErrorMsg.Message)
-
-		case http.StatusNotFound:
-			// TODO: model not found error
-			return "", selfErr.NewNotFoundError(response.ErrorMsg.Message)
-
-		case http.StatusTooManyRequests:
-			// TODO: rate error or bill error
-			return "", selfErr.NewTooManyReqError(response.ErrorMsg.Message)
-
-		default:
-			return "", nil
-		}
-	}
+	return handleChatRespFromLLMs(resp, statusCode)
 }
