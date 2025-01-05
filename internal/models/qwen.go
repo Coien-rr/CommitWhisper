@@ -22,6 +22,10 @@ func (m *QwenModel) addPrompt(promptMsg string) {
 	}
 }
 
+func (m *QwenModel) addModelResponse(respMsg string) {
+	m.localSession.appendMessage("assistant", respMsg)
+}
+
 func (m *QwenModel) prepareSessionChatReqBody() genericLLMsServiceReqBody {
 	return genericLLMsServiceReqBody{
 		Model:    m.modelName,
@@ -66,5 +70,12 @@ func (m *QwenModel) GenerateCommitMessage(diffInfo string) (string, error) {
 		)
 	}
 
-	return handleChatRespFromLLMs(resp, statusCode)
+	msg, err := handleChatRespFromLLMs(resp, statusCode)
+	if err != nil {
+		return msg, err
+	}
+
+	m.addModelResponse(msg)
+
+	return msg, nil
 }
