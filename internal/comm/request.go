@@ -45,3 +45,7 @@ func (c *client) CreateNewSessionRequest(createSessionReqBody []byte) (*http.Req
 func (c *client) CreateSessionChatRequest(sessionChatReqBody []byte) (*http.Request, error) {
 	return c.createLLMsRequest(sessionChatReqBody, "/context/chat/completions")
 }
+
+func (c *client) CreateGenericLChatRequest(genericChatReqBody []byte) (*http.Request, error) {
+	return c.createLLMsRequest(genericChatReqBody, "")
+}

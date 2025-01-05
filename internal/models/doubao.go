@@ -17,21 +17,15 @@ type DoubaoModel struct {
 	isRefineStage bool
 }
 
-// TODO: refactor base model
-type doubaoSessionReqBody struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
-}
-
 type DoubaoCreateSessionReqBody struct {
 	Mode string `json:"mode"`
-	doubaoSessionReqBody
+	genericLLMsServiceReqBody
 	TTL int `json:"ttl"`
 }
 
 type DoubaoSessionChatReqBody struct {
 	ContextID string `json:"context_id"`
-	doubaoSessionReqBody
+	genericLLMsServiceReqBody
 }
 
 type truncationStrategy struct {
@@ -69,19 +63,10 @@ type SessionError struct {
 
 type ResponseBody struct {
 	Choices []Choices `json:"choices"`
-	// Choices []struct {
-	// 	Message struct {
-	// 		Role    string `json:"role"`
-	// 		Content string `json:"content"`
-	// 	} `json:"message"`
-	// } `json:"choices"`
 }
 
 type Choices struct {
 	Message Message `json:"message"`
-	// Logprobs     interface{} `json:"logprobs"`
-	// FinishReason string      `json:"finish_reason"`
-	// Index        int         `json:"index"`
 }
 
 type errResponseBody struct {
@@ -96,7 +81,7 @@ type errorMsg struct {
 	Code    string `json:"code"`
 }
 
-func NewDoubaoModel(modelName, baseUrl, apiKey string) (*DoubaoModel, error) {
+func NewDoubaoModelAgent(modelName, baseUrl, apiKey string) (*DoubaoModel, error) {
 	model := &DoubaoModel{
 		BaseModel:     BaseModel{modelName: modelName, url: baseUrl, key: apiKey},
 		isRefineStage: false,
@@ -144,7 +129,7 @@ func (m *DoubaoModel) initContextSession() error {
 
 func (m *DoubaoModel) prepareSessionCreateReqBody() DoubaoCreateSessionReqBody {
 	return DoubaoCreateSessionReqBody{
-		doubaoSessionReqBody: doubaoSessionReqBody{
+		genericLLMsServiceReqBody: genericLLMsServiceReqBody{
 			Model: m.modelName,
 			Messages: []Message{
 				{Role: "system", Content: GetSystemPrompt()},
@@ -166,7 +151,7 @@ func (m *DoubaoModel) prepareSessionChatReqBody(diffInfo string) DoubaoSessionCh
 
 	return DoubaoSessionChatReqBody{
 		ContextID: m.contextID,
-		doubaoSessionReqBody: doubaoSessionReqBody{
+		genericLLMsServiceReqBody: genericLLMsServiceReqBody{
 			Model: m.modelName,
 			Messages: []Message{
 				{Role: "user", Content: prompt},
@@ -215,7 +200,7 @@ func (m *DoubaoModel) GenerateCommitMessage(diffInfo string) (string, error) {
 		)
 	}
 
-	resp, statusCode, err := client.CreateChatReqWithLLMs(requestBody)
+	resp, statusCode, err := client.CreateSessionChatReqWithLLMs(requestBody)
 	if err != nil {
 		return "", fmt.Errorf(
 			"ERROR(GenerateCommitMessage): %w",

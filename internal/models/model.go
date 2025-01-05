@@ -13,11 +13,6 @@ type RequestBody struct {
 	Messages []Message `json:"messages"`
 }
 
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
 type BaseModel struct {
 	modelName string
 	url       string
@@ -25,24 +20,26 @@ type BaseModel struct {
 }
 
 func CreateModel(aiProvider, modelName, url, key string) (Model, error) {
+	var modelAgent Model
+	var err error
 	switch aiProvider {
-	// case "Qwen":
-	// 	return &QWENModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
-	// case "OpenAI":
-	// 	return &OpenAIModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
+	case "Qwen":
+		modelAgent, err = NewQwenModelAgent(modelName, url, key)
 	case "Doubao":
-		modelAgent, err := NewDoubaoModel(modelName, url, key)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"CreateModelError: Create %v Model Failed For %w",
-				aiProvider, err,
-			)
-		}
-		return modelAgent, nil
+		modelAgent, err = NewDoubaoModelAgent(modelName, url, key)
+	// TODO: OpenAI
 	default:
 		return nil, fmt.Errorf(
 			"CreateModelError: %v is unsupported yet, Coming Soon  ",
 			aiProvider,
 		)
 	}
+
+	if err != nil {
+		return nil, fmt.Errorf(
+			"CreateModelError: Create %v Model Failed For %w",
+			aiProvider, err,
+		)
+	}
+	return modelAgent, err
 }

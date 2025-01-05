@@ -43,8 +43,20 @@ func (c *client) CreateLLMsContextSession(reqBody []byte) ([]byte, int, error) {
 	return c.fetchLLMsServiceResp(req)
 }
 
-func (c *client) CreateChatReqWithLLMs(reqBody []byte) ([]byte, int, error) {
+func (c *client) CreateSessionChatReqWithLLMs(reqBody []byte) ([]byte, int, error) {
 	req, err := c.CreateSessionChatRequest(reqBody)
+	if err != nil {
+		return nil, 0, fmt.Errorf(
+			"ERROR(CreateChatReqWithLLMs): %w",
+			err,
+		)
+	}
+
+	return c.fetchLLMsServiceResp(req)
+}
+
+func (c *client) CreateChatReqWithLLMs(reqBody []byte) ([]byte, int, error) {
+	req, err := c.CreateGenericLChatRequest(reqBody)
 	if err != nil {
 		return nil, 0, fmt.Errorf(
 			"ERROR(CreateChatReqWithLLMs): %w",

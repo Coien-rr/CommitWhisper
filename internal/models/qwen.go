@@ -1,41 +1,106 @@
 package models
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/Coien-rr/CommitWhisper/internal/comm"
+
+	selfErr "github.com/Coien-rr/CommitWhisper/pkg/errors"
 )
 
-type QWENModel struct {
+type QwenModel struct {
 	BaseModel
+	localSession  session
+	isRefineStage bool
 }
 
-func (m *QWENModel) prepareRequestBody(diffInfo string) RequestBody {
-	return RequestBody{
-		Model: m.modelName,
-		Messages: []Message{
-			{Role: "system", Content: GetSystemPrompt()},
-			{Role: "user", Content: getCommitGeneratePrompt(diffInfo)},
-		},
+func (m *QwenModel) addPrompt(promptMsg string) {
+	if m.isRefineStage {
+		m.localSession.appendMessage("user", getCommitGeneratePrompt(promptMsg))
+		m.isRefineStage = true
+	} else {
+		m.localSession.appendMessage("user", getCommitRefinePrompt(promptMsg))
 	}
 }
 
-func (m *QWENModel) PrepareRequest(diffInfo string) (*http.Request, error) {
-	reqBody := m.prepareRequestBody(diffInfo)
+func (m *QwenModel) prepareSessionChatReqBody() genericLLMsServiceReqBody {
+	return genericLLMsServiceReqBody{
+		Model:    m.modelName,
+		Messages: m.localSession.getMessages(),
+	}
+}
 
-	reqBytes, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode request body: %v", err)
+func NewQwenModelAgent(modelName, baseUrl, apiKey string) (Model, error) {
+	model := &QwenModel{
+		BaseModel:     BaseModel{modelName: modelName, url: baseUrl, key: apiKey},
+		isRefineStage: false,
 	}
 
-	req, err := http.NewRequest(http.MethodPost, m.url, bytes.NewBuffer(reqBytes))
+	err := model.initSession()
+
+	return model, err
+}
+
+// NOTE: Local Session
+func (m *QwenModel) initSession() error {
+	m.localSession.appendMessage("system", GetSystemPrompt())
+	return nil
+}
+
+func (m *QwenModel) GenerateCommitMessage(diffInfo string) (string, error) {
+	m.addPrompt(diffInfo)
+
+	client := comm.NewLLMsServiceClient(m.key, m.url)
+	requestBody, err := json.Marshal(m.prepareSessionChatReqBody())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
+		return "", fmt.Errorf(
+			"ERROR(GenerateCommitMessage): Failed to marshal request body: %w",
+			err,
+		)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+m.key)
-	req.Header.Set("Content-Type", "application/json")
+	resp, statusCode, err := client.CreateChatReqWithLLMs(requestBody)
+	if err != nil {
+		return "", fmt.Errorf(
+			"ERROR(GenerateCommitMessage): %w",
+			err,
+		)
+	}
 
-	return req, nil
+	if statusCode == http.StatusOK {
+		var response ResponseBody
+		if err := json.Unmarshal(resp, &response); err != nil {
+			return "", fmt.Errorf(
+				"ERROR(generateCommitMessage): failed to parse response JSON: %v",
+				err,
+			)
+		}
+		return response.Choices[0].Message.Content, nil
+	} else {
+		var response errResponseBody
+		if err := json.Unmarshal(resp, &response); err != nil {
+			return "", fmt.Errorf(
+				"ERROR(generateCommitMessage): failed to parse response JSON: %v",
+				err,
+			)
+		}
+		switch statusCode {
+		case http.StatusUnauthorized:
+			// TODO: key Invalid  error
+			return "", selfErr.NewInvalidKeyError(response.ErrorMsg.Message)
+
+		case http.StatusNotFound:
+			// TODO: model not found error
+			return "", selfErr.NewNotFoundError(response.ErrorMsg.Message)
+
+		case http.StatusTooManyRequests:
+			// TODO: rate error or bill error
+			return "", selfErr.NewTooManyReqError(response.ErrorMsg.Message)
+
+		default:
+			return "", nil
+		}
+	}
 }
