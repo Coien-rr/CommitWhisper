@@ -28,6 +28,8 @@ func CreateModel(aiProvider, modelName, url, key string) (Model, error) {
 	case "Doubao":
 		modelAgent, err = NewDoubaoModelAgent(modelName, url, key)
 	// TODO: OpenAI
+	case "OpenAI":
+		modelAgent, err = NewDoubaoModelAgent(modelName, url, key)
 	default:
 		return nil, fmt.Errorf(
 			"CreateModelError: %v is unsupported yet, Coming Soon  ",

@@ -1,41 +1,81 @@
 package models
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
+
+	"github.com/Coien-rr/CommitWhisper/internal/comm"
 )
 
 type OpenAIModel struct {
 	BaseModel
+	localSession  session
+	isRefineStage bool
 }
 
-func (m *OpenAIModel) prepareRequestBody(diffInfo string) RequestBody {
-	return RequestBody{
-		Model: m.modelName,
-		Messages: []Message{
-			{Role: "system", Content: GetSystemPrompt()},
-			{Role: "user", Content: getCommitGeneratePrompt(diffInfo)},
-		},
+func (m *OpenAIModel) addPrompt(promptMsg string) {
+	if m.isRefineStage {
+		m.localSession.appendMessage("user", getCommitGeneratePrompt(promptMsg))
+		m.isRefineStage = true
+	} else {
+		m.localSession.appendMessage("user", getCommitRefinePrompt(promptMsg))
 	}
 }
 
-func (m *OpenAIModel) PrepareRequest(diffInfo string) (*http.Request, error) {
-	reqBody := m.prepareRequestBody(diffInfo)
+func (m *OpenAIModel) addModelResponse(respMsg string) {
+	m.localSession.appendMessage("assistant", respMsg)
+}
 
-	reqBytes, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode request body: %v", err)
+func (m *OpenAIModel) prepareSessionChatReqBody() genericLLMsServiceReqBody {
+	return genericLLMsServiceReqBody{
+		Model:    m.modelName,
+		Messages: m.localSession.getMessages(),
+	}
+}
+
+func NewOpenAIModelAgent(modelName, baseUrl, apiKey string) (Model, error) {
+	model := &OpenAIModel{
+		BaseModel:     BaseModel{modelName: modelName, url: baseUrl, key: apiKey},
+		isRefineStage: false,
 	}
 
-	req, err := http.NewRequest(http.MethodPost, m.url, bytes.NewBuffer(reqBytes))
+	err := model.initSession()
+
+	return model, err
+}
+
+// NOTE: Local Session
+func (m *OpenAIModel) initSession() error {
+	m.localSession.appendMessage("system", GetSystemPrompt())
+	return nil
+}
+
+func (m *OpenAIModel) GenerateCommitMessage(diffInfo string) (string, error) {
+	m.addPrompt(diffInfo)
+
+	client := comm.NewLLMsServiceClient(m.key, m.url)
+	requestBody, err := json.Marshal(m.prepareSessionChatReqBody())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
+		return "", fmt.Errorf(
+			"ERROR(GenerateCommitMessage): Failed to marshal request body: %w",
+			err,
+		)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+m.key)
-	req.Header.Set("Content-Type", "application/json")
+	resp, statusCode, err := client.CreateChatReqWithLLMs(requestBody)
+	if err != nil {
+		return "", fmt.Errorf(
+			"ERROR(GenerateCommitMessage): %w",
+			err,
+		)
+	}
 
-	return req, nil
+	msg, err := handleChatRespFromLLMs(resp, statusCode)
+	if err != nil {
+		return msg, err
+	}
+
+	m.addModelResponse(msg)
+
+	return msg, nil
 }
