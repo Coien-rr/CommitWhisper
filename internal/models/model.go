@@ -29,6 +29,9 @@ func CreateModel(aiProvider, modelName, url, key string) (Model, error) {
 		modelAgent, err = NewDoubaoModelAgent(modelName, url, key)
 	case "OpenAI":
 		modelAgent, err = NewOpenAIModelAgent(modelName, url, key)
+	case "DeepSeek":
+		modelAgent, err = NewDeepSeekModelAgent(modelName, url, key)
+
 	default:
 		return nil, fmt.Errorf(
 			"CreateModelError: %v is unsupported yet, Coming Soon  ",

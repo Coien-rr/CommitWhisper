@@ -4,6 +4,7 @@ var AiProviderList = []string{
 	"OpenAI",
 	"Qwen",
 	"Doubao",
+	"DeepSeek",
 }
 
 var ModelsList = map[string][]string{
@@ -30,12 +31,8 @@ var ModelsList = map[string][]string{
 		"qwen2.5-coder-0.5b-instruct",
 	},
 	"Doubao": {},
-	"Skylark": {
-		"Skylark2-pro-character-4k",
-		"Skylark2-pro-32k",
-		"Skylark2-pro-4k",
-		"Skylark2-pro-turbo-8k",
-		"Skylark2-lite-8k",
+	"DeepSeek": {
+		"deepseek-chat",
 	},
 
 	// TODO: Claude
@@ -43,8 +40,8 @@ var ModelsList = map[string][]string{
 }
 
 var AiProviderBaseUrlList = map[string]string{
-	"Qwen":    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-	"OpenAI":  "https://api.openai.com/v1/chat/completions",
-	"Doubao":  "https://ark.cn-beijing.volces.com/api/v3",
-	"Skylark": "doubao TODO",
+	"Qwen":     "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+	"OpenAI":   "https://api.openai.com/v1/chat/completions",
+	"Doubao":   "https://ark.cn-beijing.volces.com/api/v3",
+	"DeepSeek": "https://api.deepseek.com/v1/chat/completions",
 }

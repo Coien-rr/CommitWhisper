@@ -18,7 +18,7 @@ func configMenu(config *Config) {
 
 	modelSelector := huh.NewSelect[string]().
 		Value(&config.ModelName).
-		Height(8).
+		Height(10).
 		Title("Choose Your Model")
 
 	huh.NewForm(
@@ -26,7 +26,7 @@ func configMenu(config *Config) {
 			huh.NewSelect[string]().
 				Value(&config.AiProvider).
 				Title("Choose Your AiProvider").
-				Height(5).OptionsFunc(func() []huh.Option[string] {
+				Height(10).OptionsFunc(func() []huh.Option[string] {
 				return huh.NewOptions(models.AiProviderList...)
 			}, nil),
 		),
