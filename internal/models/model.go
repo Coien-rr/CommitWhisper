@@ -2,21 +2,15 @@ package models
 
 import (
 	"fmt"
-	"net/http"
 )
 
 type Model interface {
-	PrepareRequest(diffInfo string) (*http.Request, error)
+	GenerateCommitMessage(diffInfo string) (string, error)
 }
 
 type RequestBody struct {
 	Model    string    `json:"model"`
 	Messages []Message `json:"messages"`
-}
-
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
 }
 
 type BaseModel struct {
@@ -25,22 +19,28 @@ type BaseModel struct {
 	key       string
 }
 
-func prepareQuestionContent(diffInfo string) string {
-	return "Please write a commit message for these git changes, " + diffInfo
-}
-
 func CreateModel(aiProvider, modelName, url, key string) (Model, error) {
+	var modelAgent Model
+	var err error
 	switch aiProvider {
 	case "Qwen":
-		return &QWENModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
-	case "OpenAI":
-		return &OpenAIModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
+		modelAgent, err = NewQwenModelAgent(modelName, url, key)
 	case "Doubao":
-		return &DoubaoModel{BaseModel{modelName: modelName, url: url, key: key}}, nil
+		modelAgent, err = NewDoubaoModelAgent(modelName, url, key)
+	case "OpenAI":
+		modelAgent, err = NewOpenAIModelAgent(modelName, url, key)
 	default:
 		return nil, fmt.Errorf(
 			"CreateModelError: %v is unsupported yet, Coming Soon  ",
 			aiProvider,
 		)
 	}
+
+	if err != nil {
+		return nil, fmt.Errorf(
+			"CreateModelError: Create %v Model Failed For %w",
+			aiProvider, err,
+		)
+	}
+	return modelAgent, err
 }

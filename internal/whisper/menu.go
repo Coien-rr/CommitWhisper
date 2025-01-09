@@ -58,6 +58,6 @@ func configMenu(config *Config) {
 	if config.AiProvider == "Doubao" {
 		config.ModelName = endpoint
 	}
-	config.APIUrl = models.ModelsURLList[config.AiProvider]
+	config.APIUrl = models.AiProviderBaseUrlList[config.AiProvider]
 	// TODO: add config check
 }

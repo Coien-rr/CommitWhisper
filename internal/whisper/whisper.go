@@ -1,15 +1,8 @@
 package whisper
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"time"
-
 	"github.com/Coien-rr/CommitWhisper/internal/git"
 	"github.com/Coien-rr/CommitWhisper/internal/models"
-	selfErr "github.com/Coien-rr/CommitWhisper/pkg/errors"
 	"github.com/Coien-rr/CommitWhisper/pkg/utils"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
@@ -18,16 +11,11 @@ import (
 
 type Whisper struct {
 	llmModel models.Model
+	config   Config
 }
 
 type ResponseBody struct {
 	Choices []Choices `json:"choices"`
-	// Choices []struct {
-	// 	Message struct {
-	// 		Role    string `json:"role"`
-	// 		Content string `json:"content"`
-	// 	} `json:"message"`
-	// } `json:"choices"`
 }
 
 type Choices struct {
@@ -62,14 +50,7 @@ func NewWhisper(config Config) *Whisper {
 		return nil
 	}
 
-	if engine, err := models.CreateModel(config.AiProvider, config.ModelName, config.APIUrl, config.APIKey); err == nil {
-		return &Whisper{
-			llmModel: engine,
-		}
-	} else {
-		utils.WhisperPrinter.Warning(err.Error())
-		return nil
-	}
+	return &Whisper{config: config}
 }
 
 func (w *Whisper) greet() {
@@ -85,77 +66,48 @@ func (w *Whisper) checkIsGitRepo() bool {
 	return true
 }
 
+func (w *Whisper) isUsePromptRefine() bool {
+	return true
+}
+
 func (w *Whisper) Run() {
 	w.greet()
+
 	if w.checkIsGitRepo() {
-		w.generateAICommitByGitDiff()
+		if diff, isVaild := w.inspectGitChanges(); isVaild {
+			if engine,
+				err := models.CreateModel(
+				w.config.AiProvider,
+				w.config.ModelName,
+				w.config.APIUrl,
+				w.config.APIKey,
+			); err == nil {
+				w.llmModel = engine
+			} else {
+				utils.WhisperPrinter.Warning(err.Error())
+				return
+			}
+			if w.isUsePromptRefine() {
+				w.createCommitGeneratorBySession(diff)
+			} else {
+				w.generateAICommitByGitDiff(diff)
+			}
+		} else {
+			return
+		}
 	}
 }
 
 func (w *Whisper) generateCommitMessage(diffInfo string) (string, error) {
-	req, err := w.llmModel.PrepareRequest(diffInfo)
-	if err != nil {
-		return "", fmt.Errorf("failed to prepare request: %v", err)
-	}
-	resp, err := w.generatingCommitMessage(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to send request: %v", err)
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("ERROR(generateCommitMessage): failed to read response body: %v", err)
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		var response ResponseBody
-		if err := json.Unmarshal(body, &response); err != nil {
-			return "", fmt.Errorf(
-				"ERROR(generateCommitMessage): failed to parse response JSON: %v",
-				err,
-			)
-		}
-		return response.Choices[0].Message.Content, nil
-	} else {
-		var response errResponseBody
-		if err := json.Unmarshal(body, &response); err != nil {
-			return "", fmt.Errorf(
-				"ERROR(generateCommitMessage): failed to parse response JSON: %v",
-				err,
-			)
-		}
-		switch resp.StatusCode {
-		case http.StatusUnauthorized:
-			// TODO: key Invalid  error
-			return "", selfErr.NewInvalidKeyError(response.ErrorMsg.Message)
-
-		case http.StatusNotFound:
-			// TODO: model not found error
-			return "", selfErr.NewNotFoundError(response.ErrorMsg.Message)
-
-		case http.StatusTooManyRequests:
-			// TODO: rate error or bill error
-			return "", selfErr.NewTooManyReqError(response.ErrorMsg.Message)
-
-		default:
-			return "", nil
-		}
-	}
+	return w.generatingCommitMessage(diffInfo)
 }
 
-func (w *Whisper) generatingCommitMessage(req *http.Request) (*http.Response, error) {
-	// TODO: add timout handle
-	client := &http.Client{
-		Timeout: 100 * time.Second,
-	}
-
-	var res *http.Response
+func (w *Whisper) generatingCommitMessage(prompt string) (string, error) {
+	var commitMsg string
 	var err error
 
 	action := func() {
-		res, err = client.Do(req)
+		commitMsg, err = w.llmModel.GenerateCommitMessage(prompt)
 	}
 	_ = spinner.New().
 		Title("Generating Commit Message󰒲 ").
@@ -163,7 +115,7 @@ func (w *Whisper) generatingCommitMessage(req *http.Request) (*http.Response, er
 		Action(action).
 		Run()
 
-	return res, err
+	return commitMsg, err
 }
 
 func (w *Whisper) conformGeneratedMessage(generatedCommitMsg string) bool {
@@ -173,15 +125,28 @@ func (w *Whisper) conformGeneratedMessage(generatedCommitMsg string) bool {
 		Title("Confirm the commit message?").
 		Description(generatedCommitMsg).
 		Affirmative("Confirm!").
-		Negative("Retry!").
+		Negative("Refine!").
 		Value(&confirm).Run()
 
 	return confirm
 }
 
+func (w *Whisper) refineGeneratedMessage() string {
+	var refinePrompt string
+
+	huh.NewInput().
+		Title("Input Your Prompt For Refine").
+		Prompt("💡").
+		// Validate(isFood).
+		Value(&refinePrompt).Run()
+
+	return refinePrompt
+}
+
 func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
+	refinePrompt := diffInfo
 	for {
-		commitMsg, err := w.generateCommitMessage(diffInfo)
+		commitMsg, err := w.generateCommitMessage(refinePrompt)
 		if err != nil {
 			// TODO: add error handle
 			utils.WhisperPrinter.Error(err.Error())
@@ -195,20 +160,29 @@ func (w *Whisper) handleGeneratedCommitMsg(diffInfo string) {
 			utils.WhisperPrinter.Info("Copied Commit Message into ClipBoard ✔")
 			return
 		case false:
-			utils.WhisperPrinter.Warning("Not Good Enough, Retry!")
+			refinePrompt = w.refineGeneratedMessage()
+			// utils.WhisperPrinter.Info(refinePrompt)
 			continue
 		}
 	}
 }
 
-func (w *Whisper) generateAICommitByGitDiff() {
+func (w *Whisper) generateAICommitByGitDiff(diff string) {
+	w.handleGeneratedCommitMsg(diff)
+}
+
+func (w *Whisper) createCommitGeneratorBySession(diff string) {
+	w.handleGeneratedCommitMsg(diff)
+}
+
+func (w *Whisper) inspectGitChanges() (string, bool) {
 	diff, err := git.GetGitDiff()
 	if err != nil {
 		utils.WhisperPrinter.Error(err.Error())
-		return
+		return "", false
 	} else if diff == "" {
 		utils.WhisperPrinter.Info("Working tree clean,Nothing to commit ")
-		return
+		return "", false
 	}
-	w.handleGeneratedCommitMsg(diff)
+	return diff, true
 }

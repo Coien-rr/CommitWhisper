@@ -42,9 +42,9 @@ var ModelsList = map[string][]string{
 	// TODO: Gemini
 }
 
-var ModelsURLList = map[string]string{
+var AiProviderBaseUrlList = map[string]string{
 	"Qwen":    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
 	"OpenAI":  "https://api.openai.com/v1/chat/completions",
-	"Doubao":  "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+	"Doubao":  "https://ark.cn-beijing.volces.com/api/v3",
 	"Skylark": "doubao TODO",
 }
