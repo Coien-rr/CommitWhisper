@@ -8,7 +8,7 @@ _Whisper From `LLMs` For Your `Commit` Msg_
 
 - 🔍 Get Diff Info From Staged Files
 - 🌈 Interactive configuration selection for easy model switching.
-- 🌅 Supports **Chinese AI providers**, Such as:
+- 🌅 Supports **Mainstream AI providers**, Such as:
   - [ChatGPT](https://platform.openai.com/docs/models) From `OpenAI`
   - 💤 [Claude](https://claude.ai/chats) From `Anthropic`
   - 💤 [Gemini](https://ai.google.dev/gemini-api/docs) From `Google`
