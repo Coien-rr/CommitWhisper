@@ -16,6 +16,7 @@ _Whisper From `LLMs` For Your `Commit` Msg_
 - 🚀 Especially supports **Chinese AI providers**, Such as:
   - [Tongyi Qianwen(通义千问)](https://www.aliyun.com/product/bailian) From `Alibaba`
   - [Doubao(豆包)](https://www.volcengine.com/product/doubao) From `ByteDance`
+  - [DeepSeek](https://www.deepseek.com/) From `DeepSeek`
   - 💤 More
 - 💬 [TODO] Interactive prompts allow the model to refine generated messages.
 - ⏳ Coming Soon More
@@ -27,6 +28,7 @@ _Whisper From `LLMs` For Your `Commit` Msg_
 | Qianwen           | ✅ [Get Your Key](https://www.aliyun.com/product/bailian)|
 | OpenAI            | ✅ [Get Your Key](https://platform.openai.com)|
 | Doubao            | ✅ [Get Your Endpoint and Key](https://console.volcengine.com)|
+| DeepSeek          | ✅ [Get Your Key](https://www.deepseek.com/)|
 | Claude            | 💤 Coming Soon       |
 
 ## 🔥 Status
