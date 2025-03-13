@@ -33,6 +33,7 @@ var ModelsList = map[string][]string{
 	"Doubao": {},
 	"DeepSeek": {
 		"deepseek-chat",
+		"deepseek-reasoner",
 	},
 
 	// TODO: Claude
@@ -43,5 +44,5 @@ var AiProviderBaseUrlList = map[string]string{
 	"Qwen":     "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
 	"OpenAI":   "https://api.openai.com/v1/chat/completions",
 	"Doubao":   "https://ark.cn-beijing.volces.com/api/v3",
-	"DeepSeek": "https://api.deepseek.com/v1/chat/completions",
+	"DeepSeek": "https://api.deepseek.com/chat/completions",
 }
