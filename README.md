@@ -8,15 +8,17 @@ _Whisper From `LLMs` For Your `Commit` Msg_
 
 - 🔍 Get Diff Info From Staged Files
 - 🌈 Interactive configuration selection for easy model switching.
+- 🚀 Especially supports **Chinese AI providers**, Such as:
+  - [DeepSeek](https://www.deepseek.com/) From `DeepSeek`
+    - deepseek-chat
+    - deepseek-reasoner
+  - [Tongyi Qianwen(通义千问)](https://www.aliyun.com/product/bailian) From `Alibaba`
+  - [Doubao(豆包)](https://www.volcengine.com/product/doubao) From `ByteDance`
+  - 💤 More
 - 🌅 Supports **Mainstream AI providers**, Such as:
   - [ChatGPT](https://platform.openai.com/docs/models) From `OpenAI`
   - 💤 [Claude](https://claude.ai/chats) From `Anthropic`
   - 💤 [Gemini](https://ai.google.dev/gemini-api/docs) From `Google`
-  - 💤 More
-- 🚀 Especially supports **Chinese AI providers**, Such as:
-  - [Tongyi Qianwen(通义千问)](https://www.aliyun.com/product/bailian) From `Alibaba`
-  - [Doubao(豆包)](https://www.volcengine.com/product/doubao) From `ByteDance`
-  - [DeepSeek](https://www.deepseek.com/) From `DeepSeek`
   - 💤 More
 - 💬 [TODO] Interactive prompts allow the model to refine generated messages.
 - ⏳ Coming Soon More
